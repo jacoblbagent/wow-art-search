@@ -1,7 +1,7 @@
 import raw from './data/artworks.json'
 import type { ArtItem, Page } from './types.ts'
 
-type RawArt = ArtItem & { ctx: string }
+type RawArt = Omit<ArtItem, 'src' | 'origin'> & { img: string; ctx: string }
 
 const RAW = raw as unknown as RawArt[]
 const INDEX = RAW.map((r) => ({
@@ -12,6 +12,10 @@ const INDEX = RAW.map((r) => ({
 }))
 
 export const TOTAL = RAW.length
+
+export function imageUrl(img: string): string {
+  return `${import.meta.env.BASE_URL}images/${img}`
+}
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -28,16 +32,34 @@ function termPattern(term: string): RegExp {
   return new RegExp(term.length >= 6 ? `\\b${e}` : `\\b${e}\\w{0,2}\\b`)
 }
 
+function toItem(r: RawArt): ArtItem {
+  return {
+    id: String(r.id),
+    title: r.title,
+    artist: r.artist,
+    src: imageUrl(r.img),
+    full: r.full,
+    page: r.page,
+    w: r.w,
+    h: r.h,
+    origin: 'index',
+  }
+}
+
 /**
- * Client-side ranked search over the bundled artwork index. Every term must
- * appear somewhere (title, artist or source description); title hits rank above
- * artist hits above description-only hits.
+ * Client-side ranked search over the bundled artwork index — used by the plain
+ * search box so browsing stays instant and offline. Every term must appear
+ * somewhere (title, artist or source description); title hits rank highest.
  */
 export function searchArt(query: string, limit: number): Page {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
 
   if (!terms.length) {
-    return { items: INDEX.slice(0, limit).map((e) => e.r), total: INDEX.length, hasMore: INDEX.length > limit }
+    return {
+      items: INDEX.slice(0, limit).map((e) => toItem(e.r)),
+      total: INDEX.length,
+      hasMore: INDEX.length > limit,
+    }
   }
 
   const patterns = terms.map(termPattern)
@@ -59,12 +81,8 @@ export function searchArt(query: string, limit: number): Page {
   matched.sort((a, b) => (score.get(b) ?? 0) - (score.get(a) ?? 0) || a.r.title.localeCompare(b.r.title))
 
   return {
-    items: matched.slice(0, limit).map((e) => e.r),
+    items: matched.slice(0, limit).map((e) => toItem(e.r)),
     total: matched.length,
     hasMore: matched.length > limit,
   }
-}
-
-export function imageUrl(img: string): string {
-  return `${import.meta.env.BASE_URL}images/${img}`
 }

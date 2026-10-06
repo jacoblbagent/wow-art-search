@@ -1,27 +1,36 @@
 {
   "name": "wow-art-search",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k -n web,api -c cyan,magenta \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "vite",
+    "dev:api": "tsx watch server/index.ts",
+    "start": "tsx server/index.ts",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && VITE_BASE=/wow-art-search/ vite build",
+    "typecheck": "tsc -b",
     "preview": "vite preview",
-    "deploy": "gh-pages -d dist --dotfiles"
+    "deploy": "npm run build:pages && gh-pages -d dist --dotfiles"
   },
   "dependencies": {
     "@fontsource/alegreya-sans": "^5.3.0",
     "@fontsource/cinzel": "^5.3.0",
+    "express": "^5.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@types/node": "^24.19.1",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "concurrently": "^9.1.2",
     "gh-pages": "^6.3.0",
     "sass": "^1.102.0",
+    "tsx": "^4.19.2",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
   }

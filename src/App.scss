@@ -139,6 +139,225 @@
   opacity: 0.5;
 }
 
+.tally__reset {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.tally__reset:hover {
+  opacity: 0.8;
+}
+
+/* ---------- agent ---------- */
+
+.agent {
+  margin-top: 20px;
+  padding: 18px 20px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+
+.agent__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.agent__head h2 {
+  font-family: var(--font-display);
+  font-size: var(--step-4);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.agent__hint {
+  font-size: var(--step-1);
+  color: var(--ink-3);
+}
+
+.agent__transcript {
+  max-height: 330px;
+  overflow-y: auto;
+  margin: 16px 0 0;
+  padding: 16px 2px 4px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.turn {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+.agent__transcript .turn {
+  margin-top: 0;
+}
+
+.turn__who {
+  font-size: var(--step-1);
+  font-weight: 700;
+  color: var(--ink-3);
+  padding-top: 2px;
+}
+
+.turn--user .turn__who {
+  color: var(--accent-soft);
+}
+
+.turn__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.turn__text {
+  font-size: var(--step-3);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 72ch;
+}
+
+.turn__text.dim {
+  color: var(--ink-3);
+}
+
+.turn__sources {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--step-2);
+}
+
+.turn__meta {
+  font-size: var(--step-1);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.steps li {
+  font-size: var(--step-2);
+  color: var(--ink-2);
+  padding-left: 14px;
+  position: relative;
+}
+
+.steps li::before {
+  content: '–';
+  position: absolute;
+  left: 0;
+  color: var(--ink-3);
+}
+
+.think {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 8px 11px;
+}
+
+.think summary {
+  font-size: var(--step-1);
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.think p {
+  margin-top: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: var(--step-2);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.agent__seeds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.agent__form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.agent__input {
+  flex: 1;
+  min-height: 54px;
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: var(--step-3);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  resize: vertical;
+  touch-action: manipulation;
+}
+
+.agent__input::placeholder {
+  color: var(--ink-3);
+}
+
+.agent__input:hover {
+  border-color: var(--line-strong);
+}
+
+.agent__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.primary {
+  padding: 12px 22px;
+  font-size: var(--step-2);
+  font-weight: 700;
+  color: #1a1408;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity 0.16s ease;
+}
+
+.primary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* ---------- results ---------- */
 
 .stage {
@@ -213,11 +432,29 @@
   color: var(--ink-2);
 }
 
+.card__flag {
+  margin-left: 7px;
+  color: var(--ink-3);
+}
+
 .notice {
   padding: 40px 0;
   font-size: var(--step-3);
   color: var(--ink-2);
   max-width: 62ch;
+}
+
+.notice--warn {
+  padding: 18px 0 0;
+  color: var(--accent-soft);
+}
+
+code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 0.9em;
+  padding: 1px 5px;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
 }
 
 .more {
@@ -444,6 +681,32 @@
 
   .search__input {
     font-size: 16px;
+  }
+
+  .agent {
+    padding: 15px 14px 16px;
+  }
+
+  .turn {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .agent__transcript {
+    max-height: 44vh;
+  }
+
+  .agent__form {
+    flex-wrap: wrap;
+  }
+
+  .agent__input {
+    font-size: 16px;
+  }
+
+  .primary,
+  .ghost {
+    min-height: 44px;
   }
 
   .grid {

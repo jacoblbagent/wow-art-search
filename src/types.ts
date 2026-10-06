@@ -1,18 +1,31 @@
 export interface ArtItem {
-  id: number
+  id: string
   title: string
   artist: string | null
-  w: number
-  h: number
-  /** local file name inside public/images/ */
-  img: string
-  /** original full-resolution file on the Warcraft Wiki CDN */
-  full: string
+  /** ready-to-use image URL — local `/images/...` or a remote wiki thumbnail */
+  src: string
+  /** original full-resolution file, when known */
+  full?: string
   page: string
+  w?: number
+  h?: number
+  origin: 'index' | 'live'
 }
 
 export interface Page {
   items: ArtItem[]
   total: number
   hasMore: boolean
+}
+
+export interface Citation {
+  label: string
+  url: string
+}
+
+export interface ChatTurn {
+  role: 'user' | 'assistant'
+  content: string
+  citations?: Citation[]
+  steps?: number
 }

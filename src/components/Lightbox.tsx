@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import type { ArtItem } from '../types.ts'
-import { imageUrl } from '../search.ts'
 import { CloseIcon, ExternalIcon } from './Icons.tsx'
 
 interface Props {
@@ -32,7 +31,7 @@ export default function Lightbox({ item, onClose }: Props) {
           <CloseIcon />
         </button>
         <div className="lightbox__figure">
-          <img src={imageUrl(item.img)} alt={item.title} decoding="async" />
+          <img src={item.src} alt={item.title} decoding="async" />
         </div>
         <div className="lightbox__info">
           <h2 className="lightbox__title">{item.title}</h2>
@@ -41,17 +40,25 @@ export default function Lightbox({ item, onClose }: Props) {
               <dt>Artist</dt>
               <dd>{item.artist ?? 'Uncredited'}</dd>
             </div>
+            {item.w && item.h ? (
+              <div>
+                <dt>Source resolution</dt>
+                <dd>
+                  {item.w} × {item.h}
+                </dd>
+              </div>
+            ) : null}
             <div>
-              <dt>Source resolution</dt>
-              <dd>
-                {item.w} × {item.h}
-              </dd>
+              <dt>Source</dt>
+              <dd>{item.origin === 'live' ? 'Warcraft Wiki (live search)' : 'Warcraft Wiki (indexed)'}</dd>
             </div>
           </dl>
           <div className="lightbox__links">
-            <a href={item.full} target="_blank" rel="noreferrer noopener">
-              Full resolution <ExternalIcon />
-            </a>
+            {item.full && (
+              <a href={item.full} target="_blank" rel="noreferrer noopener">
+                Full resolution <ExternalIcon />
+              </a>
+            )}
             <a href={item.page} target="_blank" rel="noreferrer noopener">
               Warcraft Wiki file <ExternalIcon />
             </a>

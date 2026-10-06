@@ -1,54 +1,96 @@
 # Azeroth Art Search
 
-A World of Warcraft art search engine — search 2,000+ pieces of official Blizzard artwork
-(concept art, character paintings, environment plates, wallpapers) by character, race, creature,
-zone or artist.
+A World of Warcraft art search engine with an agent on top: a catalogue of 2,090 official artworks
+plus a local-model agent that searches the live Warcraft Wiki, credits artists, and answers
+questions with sources.
 
-**🔗 Live:** https://jacoblbagent.github.io/wow-art-search/
+- **🔗 Catalogue demo (static):** https://jacoblbagent.github.io/wow-art-search/
+- **🤖 Agent app (self-hosted):** http://jlb-hermes.tail1caa84.ts.net:3090 — runs on this machine,
+  reachable over Tailscale
 
-## What it does
+The GitHub Pages site is the static catalogue only; the agent needs the local backend (the page
+says so when it can't find one).
 
-- Instant client-side search across the whole bundled index — every term must match, and title
-  hits rank above artist hits above description hits.
-- Quick collection chips (Concept Art, Characters, Creatures, Dragons, Environments, Weapons &
-  Armor, Cities, All Artwork).
-- Paged results grid with lazy-loaded images; click any piece for a lightbox with artist credit,
-  source resolution and links to the full-resolution file and its wiki page.
-- Keyboard accessible: Escape closes the lightbox, focus rings everywhere, `prefers-reduced-motion`
-  respected.
+## What the agent does
 
-## Data
+Ask in plain English. The agent calls tools, then answers in a sentence or two and drops the
+matching artwork into the grid below.
 
-Artwork and metadata are harvested from the [Warcraft Wiki](https://warcraft.wiki.gg/) (MediaWiki
-API, file namespace). The site ships a **local index** (`src/data/artworks.json`) plus locally
-converted WebP images (`public/images/`), so search is instant and needs no runtime API calls and
-no CORS proxy. A "Full resolution" link in the lightbox points back at the original wiki file.
+| Tool | Purpose |
+|---|---|
+| `search_index` | 2,090 catalogued artworks — fast, offline |
+| `search_wiki` | live Warcraft Wiki file search (server-side, so Cloudflare doesn't block it) |
+| `get_file_details` | credited artist, description, categories, original resolution for one file |
+| `artist_leaderboard` | "who painted the most Dragonflight art?" |
+| `find_artists` | resolve a partial name ("Gonzalez" → full credited names) |
+| `wiki_article` | opening summary of a wiki article, for lore context |
 
-This is an unofficial fan index. World of Warcraft and all artwork are the property of Blizzard
-Entertainment and the credited artists.
+Example prompts: *fel orc concept art* · *who painted the most Dragonflight art?* · *use the live
+wiki to find gnome tinker artwork* · *moody Sylvanas pieces*.
 
 ## Stack
 
-React 19 + TypeScript + Vite + SCSS. No backend.
+React 19 + TypeScript + Vite + SCSS front end; Express 5 backend; the agent loop runs against a
+local model on Ollama's OpenAI-compatible endpoint (tool calling + streaming). Runs entirely on
+your machine — no cloud API keys, nothing leaves the box except wiki requests.
 
 ## Quick start
 
 ```bash
 npm install
-npm run dev        # http://localhost:5176 (or 5173)
-npm run build      # production build into dist/
-npm run deploy     # publish dist/ to the gh-pages branch
+npm run dev      # web on :5176 (proxies /api), agent API on :3090
 ```
 
-Dev server serves at `/`; the production build uses the `/wow-art-search/` base path for GitHub
-Pages. Deployed with the `gh-pages` npm package (`--dotfiles` keeps `.nojekyll`).
+Production / single port:
 
-## Regenerating the index
+```bash
+npm run build    # type-check + build the front end into dist/
+npm start        # Express serves dist/ AND the agent API on :3090
+```
 
-The index is built by the scripts in `tools/` (see `tools/README.md`):
+Reachable in the tailnet at `http://jlb-hermes.tail1caa84.ts.net:3090` (mapped with
+`tailscale serve --bg --tcp=3090 tcp://127.0.0.1:3090`; undo with `tailscale serve --tcp=3090 off`).
 
-1. `harvest.py` — runs ~125 MediaWiki file-namespace searches, resolves image info, and extracts
-   artist credits from page wikitext into `/tmp/artworks_raw.json`.
-2. `build_index.py` — downloads 640px thumbnails, converts them to WebP, and writes
-   `src/data/artworks.json` + `public/images/*.webp`.
-3. `clean_index.py`, `clean2.py`, `clean3.py` — tidy artist credits and titles, prune orphan images.
+### Configuration
+
+| Env var | Default | Notes |
+|---|---|---|
+| `PORT` | `3090` | Express port (API + built site) |
+| `OLLAMA_URL` | `http://127.0.0.1:11434/v1` | OpenAI-compatible endpoint |
+| `AGENT_MODEL` | `qwen3.6-27b:latest` | `qwen3-14b:latest` is a faster, smaller option |
+| `AGENT_MAX_STEPS` | `6` | max tool-calling rounds per question |
+| `VITE_BASE` | `/` | set to `/wow-art-search/` for the GitHub Pages build |
+
+### API
+
+- `POST /api/ask` → server-sent events: `status`, `reasoning`, `delta`, `artworks`, `done`, `error`
+- `GET /api/artworks?q=&limit=` → catalogue search without the model
+- `GET /api/health` → model, endpoint and catalogue size
+
+## Data
+
+Artwork and metadata are harvested from the [Warcraft Wiki](https://warcraft.wiki.gg/) (MediaWiki
+API, file namespace). The repo ships a **local index** (`src/data/artworks.json`) plus locally
+converted WebP images (`public/images/`), so catalogue search is instant and works offline.
+Artist credits come from page wikitext. `tools/` holds the harvest and index-build scripts — see
+`tools/README.md`.
+
+This is an unofficial fan index. World of Warcraft and all artwork belong to Blizzard
+Entertainment and the credited artists. Agent answers are generated by a local model and can be
+wrong; the sources are linked.
+
+## Deploying the static demo
+
+```bash
+npm run deploy   # build with base=/wow-art-search/ then push dist/ to the gh-pages branch
+```
+
+## Gotchas worth knowing
+
+- **Cloudflare challenges browser-shaped requests to the wiki API.** A purely client-side fetch is
+  blocked with no CORS header, which is why the catalogue is bundled and the live search runs
+  server-side. Plain (non-browser) User-Agents pass fine.
+- **Use `res.on('close')`, not `req.on('close')`, for SSE abort detection.** In modern Node
+  `req`'s `close` fires as soon as the POST body is consumed, which silently killed every stream.
+- Ollama returns the model's thinking in a separate `reasoning` field; the UI shows it in a
+  collapsible "Reasoning" block and streams only `content` as the answer.

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { TOTAL, searchArt } from './search.ts'
 import type { ArtItem } from './types.ts'
 import ArtCard from './components/ArtCard.tsx'
+import AgentPanel from './components/AgentPanel.tsx'
 import Lightbox from './components/Lightbox.tsx'
 import { SearchIcon } from './components/Icons.tsx'
 import './App.scss'
@@ -32,13 +33,58 @@ export default function App() {
   const [input, setInput] = useState('')
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [selected, setSelected] = useState<ArtItem | null>(null)
+  const [agentItems, setAgentItems] = useState<ArtItem[] | null>(null)
+  const [agentReady, setAgentReady] = useState<boolean | null>(null)
+  const gridTop = useRef<HTMLDivElement>(null)
   const query = useDebounced(input, 140).trim()
 
   useEffect(() => {
     setLimit(PAGE_SIZE)
   }, [query])
 
+  useEffect(() => {
+    let alive = true
+    fetch('/api/health')
+      .then((r) => alive && setAgentReady(r.ok))
+      .catch(() => alive && setAgentReady(false))
+    return () => {
+      alive = false
+    }
+  }, [])
+
   const page = useMemo(() => searchArt(query, limit), [query, limit])
+  const showing = agentItems ?? page.items
+
+  const addArtworks = (items: ArtItem[]) => {
+    setAgentItems((prev) => {
+      const base = prev ?? []
+      const seen = new Set(base.map((i) => i.src))
+      return [...base, ...items.filter((i) => !seen.has(i.src))]
+    })
+    const el = gridTop.current
+    if (el) window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
+  const browse = (q: string) => {
+    setAgentItems(null)
+    setInput(q)
+  }
+
+  const tally = agentItems ? (
+    <>
+      {agentItems.length.toLocaleString()} from the agent
+      <span className="tally__sep">·</span>
+      <button type="button" className="tally__reset" onClick={() => setAgentItems(null)}>
+        clear
+      </button>
+    </>
+  ) : (
+    <>
+      {page.total.toLocaleString()} {page.total === 1 ? 'match' : 'matches'}
+      <span className="tally__sep">·</span>
+      {page.items.length.toLocaleString()} shown
+    </>
+  )
 
   return (
     <div className="app">
@@ -47,8 +93,8 @@ export default function App() {
           <div className="brand">
             <h1>Azeroth Art Search</h1>
             <p>
-              {TOTAL.toLocaleString()} pieces of official World of Warcraft art — concept art, character
-              and environment paintings — indexed from the Warcraft Wiki.
+              {TOTAL.toLocaleString()} catalogued pieces of official World of Warcraft art, plus an agent
+              that searches the live Warcraft Wiki.
             </p>
           </div>
           <form
@@ -65,15 +111,25 @@ export default function App() {
               className="search__input"
               type="search"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Search artwork: Illidan, dragon, Sylvanas, Ironforge…"
-              aria-label="Search artwork"
+              onChange={(e) => {
+                setAgentItems(null)
+                setInput(e.target.value)
+              }}
+              placeholder="Search the catalogue: Illidan, dragon, Ironforge…"
+              aria-label="Search the catalogue"
               autoComplete="off"
               spellCheck={false}
             />
           </form>
         </div>
       </header>
+
+      {agentReady === false && (
+        <p className="notice notice--warn">
+          The agent backend isn’t running, so this is catalogue-only. Start it with <code>npm start</code>.
+        </p>
+      )}
+      <AgentPanel onArtworks={addArtworks} disabled={agentReady === false} />
 
       <div className="toolbar">
         <div className="chips" role="tablist" aria-label="Collections">
@@ -82,35 +138,32 @@ export default function App() {
               key={c.label}
               type="button"
               role="tab"
-              aria-selected={query === c.query}
-              className={`chip${query === c.query ? ' chip--on' : ''}`}
-              onClick={() => setInput(c.query)}
+              aria-selected={!agentItems && query === c.query}
+              className={`chip${!agentItems && query === c.query ? ' chip--on' : ''}`}
+              onClick={() => browse(c.query)}
             >
               {c.label}
             </button>
           ))}
         </div>
-        <span className="tally">
-          {page.total.toLocaleString()} {page.total === 1 ? 'match' : 'matches'}
-          <span className="tally__sep">·</span>
-          {page.items.length.toLocaleString()} shown
-        </span>
+        <span className="tally">{tally}</span>
       </div>
 
-      <main className="stage">
-        {page.total === 0 ? (
+      <main className="stage" ref={gridTop}>
+        {showing.length === 0 ? (
           <p className="notice">
-            No artwork matched “{query}”. Try a character, race, creature or zone — for example
-            “Arthas”, “orc”, “Valdrakken” or “old god”.
+            {query
+              ? `No catalogued artwork matched “${query}”. Try the agent above — it can search the live wiki.`
+              : 'Nothing to show.'}
           </p>
         ) : (
           <>
             <div className="grid">
-              {page.items.map((it) => (
-                <ArtCard key={it.id} item={it} onOpen={setSelected} />
+              {showing.map((it) => (
+                <ArtCard key={`${it.origin}-${it.id}`} item={it} onOpen={setSelected} />
               ))}
             </div>
-            {page.hasMore && (
+            {!agentItems && page.hasMore && (
               <div className="more">
                 <button type="button" className="ghost" onClick={() => setLimit((v) => v + PAGE_SIZE)}>
                   Show more artwork ({page.total - page.items.length} left)
@@ -126,8 +179,8 @@ export default function App() {
         <a href="https://warcraft.wiki.gg/" target="_blank" rel="noreferrer noopener">
           Warcraft Wiki
         </a>
-        . World of Warcraft is a trademark of Blizzard Entertainment. Unofficial fan index — artwork
-        remains the property of its creators.
+        . Answers are generated by a local model and can be wrong — check the linked sources. World of
+        Warcraft is a trademark of Blizzard Entertainment. Unofficial fan index.
       </footer>
 
       {selected && <Lightbox item={selected} onClose={() => setSelected(null)} />}
