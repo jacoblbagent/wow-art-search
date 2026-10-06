@@ -37,8 +37,24 @@ the gallery on the left mirrors whichever chat is active. Runs are not tied to t
 start one, switch away, and it keeps streaming — a running chat is marked `…` in the strip, and
 **Stop** only cancels the chat you are looking at.
 
-Note: the local model shares one GPU. Simultaneous runs do overlap rather than blocking each other,
+Note: the local model shares one GPU. Simultaneous runs overlap rather than blocking each other,
 but token throughput is split, so two questions together take longer than either alone.
+
+### Projects
+
+The left sidebar holds projects — named collections you save artwork into, stored server-side in
+`data/projects.json` (gitignored) so they follow you across devices on the tailnet.
+
+- **New** in the sidebar creates one and makes it the save target.
+- Hover any card and press the **bookmark** to add or remove it, or open an artwork and use
+  **Save to** — that list also creates a project on the spot and saves into it.
+- Click a row to view that project's saved images; **View catalogue** goes back.
+- Double-click a name to rename, `×` deletes.
+
+Saving does **not** switch the gallery to the project (that would yank you out of whatever you were
+browsing), and an empty project keeps showing the catalogue so there is always something to save
+from. The row you have selected stays the save target even while you browse, and a line above the
+grid says which project is receiving saves.
 
 ## Stack
 
@@ -71,6 +87,7 @@ Reachable in the tailnet at `http://jlb-hermes.tail1caa84.ts.net:3090` (mapped w
 | `OLLAMA_URL` | `http://127.0.0.1:11434/v1` | OpenAI-compatible endpoint |
 | `AGENT_MODEL` | `qwen3.6-27b:latest` | `qwen3-14b:latest` is a faster, smaller option |
 | `AGENT_MAX_STEPS` | `6` | max tool-calling rounds per question |
+| `DATA_DIR` | `<repo>/data` | where `projects.json` is stored |
 | `VITE_BASE` | `/` | set to `/wow-art-search/` for the GitHub Pages build |
 
 ### API
@@ -78,6 +95,7 @@ Reachable in the tailnet at `http://jlb-hermes.tail1caa84.ts.net:3090` (mapped w
 - `POST /api/ask` → server-sent events: `status`, `reasoning`, `delta`, `artworks`, `done`, `error`
 - `GET /api/artworks?q=&limit=` → catalogue search without the model
 - `GET /api/img?src=<wiki file url>` → same-origin image proxy (locked to warcraft.wiki.gg `/images/`)
+- `GET|POST /api/projects`, `PATCH|DELETE /api/projects/:id`, `POST|DELETE /api/projects/:id/items`
 - `GET /api/health` → model, endpoint and catalogue size
 
 ## Data

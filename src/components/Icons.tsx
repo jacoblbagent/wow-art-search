@@ -35,6 +35,17 @@ export function PlusIcon() {
   )
 }
 
+export function BookmarkIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path
+        d="M4.25 2.75h7.5a.75.75 0 0 1 .75.75v9.75L8 10.5l-4.5 2.75V3.5a.75.75 0 0 1 .75-.75Z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function RefreshIcon() {
   return (
     <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">

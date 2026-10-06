@@ -4,6 +4,14 @@ import path from 'node:path'
 import { config } from './config.ts'
 import { runAgent } from './agent.ts'
 import { searchIndex, TOTAL } from './artindex.ts'
+import {
+  addItem,
+  createProject,
+  deleteProject,
+  listProjects,
+  removeItem,
+  renameProject,
+} from './projects.ts'
 import type { AgentEvent } from './agent.ts'
 import type { ChatTurn } from './agent.ts'
 
@@ -26,6 +34,60 @@ app.get('/api/artworks', (req, res) => {
   const limit = Math.min(Number(req.query.limit ?? 48) || 48, 200)
   const { items, total } = searchIndex(q, limit)
   res.json({ query: q, total, items })
+})
+
+// ---- saved projects ----
+
+function isError(value: unknown): value is { error: string } {
+  return typeof value === 'object' && value !== null && 'error' in value
+}
+
+app.get('/api/projects', (_req, res) => {
+  res.json({ projects: listProjects() })
+})
+
+app.post('/api/projects', (req, res) => {
+  const result = createProject((req.body as { name?: unknown })?.name)
+  if (isError(result)) {
+    res.status(400).json(result)
+    return
+  }
+  res.status(201).json(result)
+})
+
+app.patch('/api/projects/:id', (req, res) => {
+  const result = renameProject(req.params.id, (req.body as { name?: unknown })?.name)
+  if (isError(result)) {
+    res.status(400).json(result)
+    return
+  }
+  res.json(result)
+})
+
+app.delete('/api/projects/:id', (req, res) => {
+  if (!deleteProject(req.params.id)) {
+    res.status(404).json({ error: 'No such project.' })
+    return
+  }
+  res.json({ ok: true })
+})
+
+app.post('/api/projects/:id/items', (req, res) => {
+  const result = addItem(req.params.id, (req.body as { item?: unknown })?.item)
+  if (isError(result)) {
+    res.status(400).json(result)
+    return
+  }
+  res.json(result)
+})
+
+app.delete('/api/projects/:id/items', (req, res) => {
+  const result = removeItem(req.params.id, String(req.query.src ?? ''))
+  if (isError(result)) {
+    res.status(400).json(result)
+    return
+  }
+  res.json(result)
 })
 
 /**

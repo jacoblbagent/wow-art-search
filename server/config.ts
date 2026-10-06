@@ -16,5 +16,7 @@ export const config = {
   wikiUa: 'wow-art-agent/1.0 (personal fan project; self-hosted)',
   wikiApi: 'https://warcraft.wiki.gg/api.php',
   dataFile: path.join(ROOT, 'src', 'data', 'artworks.json'),
+  /** Saved projects live here (not committed — it is user content). */
+  dataDir: process.env.DATA_DIR ?? path.join(ROOT, 'data'),
   distDir: path.join(ROOT, 'dist'),
 }
