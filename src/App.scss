@@ -4,39 +4,18 @@
   padding: 0 28px 64px;
 }
 
-/* ---------- masthead ---------- */
+/* ---------- search + toolbar ---------- */
 
-.masthead {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
-  margin: 0 -28px;
-  padding: 22px 28px 18px;
-}
-
-.masthead__inner {
-  display: grid;
-  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-  gap: 28px;
-  align-items: end;
-}
-
-.brand h1 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--step-5);
-  letter-spacing: -0.01em;
-  line-height: 1.1;
-  color: var(--ink);
-}
-
-.brand p {
-  margin-top: 6px;
-  font-size: var(--step-2);
-  color: var(--ink-2);
-  max-width: 46ch;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .search {
@@ -86,11 +65,17 @@
 
 .toolbar {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 0 22px;
+}
+
+.toolbar__row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
-  padding: 20px 0 22px;
 }
 
 .chips {
@@ -970,12 +955,6 @@ code {
 /* ---------- responsive ---------- */
 
 @media (max-width: 860px) {
-  .masthead__inner {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    align-items: stretch;
-  }
-
   .lightbox__panel {
     grid-template-columns: minmax(0, 1fr);
     max-height: calc(100vh - 32px);
@@ -994,15 +973,6 @@ code {
 @media (max-width: 640px) {
   .app {
     padding: 0 16px 48px;
-  }
-
-  .masthead {
-    margin: 0 -16px;
-    padding: 18px 16px 14px;
-  }
-
-  .brand h1 {
-    font-size: var(--step-4);
   }
 
   .search__input {
@@ -1062,6 +1032,29 @@ code {
   }
 }
 
+/* ---------- stacked layout (narrow screens) ---------- */
+
+@media (max-width: 1099px) {
+  /* The panels stack above the gallery, so keep search reachable while scrolling.
+     `display: contents` drops the toolbar wrapper, letting the search stick inside
+     the tall browse column — otherwise its short parent leaves it no room to stick. */
+  .toolbar {
+    display: contents;
+  }
+
+  .search {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    padding: 10px 0;
+    background: var(--bg);
+  }
+
+  .toolbar__row {
+    padding-bottom: 16px;
+  }
+}
+
 /* ---------- docked agent sidebar (wide screens) ---------- */
 
 @media (min-width: 1100px) {
@@ -1076,10 +1069,6 @@ code {
     flex-direction: column;
     overflow: hidden;
     padding-bottom: 0;
-  }
-
-  .masthead {
-    flex: 0 0 auto;
   }
 
   .layout {

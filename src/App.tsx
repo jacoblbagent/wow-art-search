@@ -205,42 +205,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="masthead">
-        <div className="masthead__inner">
-          <div className="brand">
-            <h1>Azeroth Art Search</h1>
-            <p>
-              {TOTAL.toLocaleString()} catalogued pieces of official World of Warcraft art, plus an agent
-              that searches the live Warcraft Wiki. Save what you like into projects.
-            </p>
-          </div>
-          <form
-            className="search"
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault()
-            }}
-          >
-            <span className="search__icon" aria-hidden="true">
-              <SearchIcon />
-            </span>
-            <input
-              className="search__input"
-              type="search"
-              value={input}
-              onChange={(e) => {
-                setAgentItems(null)
-                setViewingProjectId(null)
-                setInput(e.target.value)
-              }}
-              placeholder="Search the catalogue: Illidan, dragon, Ironforge…"
-              aria-label="Search the catalogue"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </form>
-        </div>
-      </header>
+      <h1 className="sr-only">Azeroth Art Search</h1>
 
       {hasBackend === false && (
         <p className="notice notice--warn">
@@ -267,21 +232,48 @@ export default function App() {
 
         <div className="browse">
           <div className="toolbar">
-            <div className="chips" role="tablist" aria-label="Collections">
-              {QUICK.map((c) => (
-                <button
-                  key={c.label}
-                  type="button"
-                  role="tab"
-                  aria-selected={!viewingResults && query === c.query}
-                  className={`chip${!viewingResults && query === c.query ? ' chip--on' : ''}`}
-                  onClick={() => browse(c.query)}
-                >
-                  {c.label}
-                </button>
-              ))}
+            <form
+              className="search"
+              role="search"
+              onSubmit={(e) => {
+                e.preventDefault()
+              }}
+            >
+              <span className="search__icon" aria-hidden="true">
+                <SearchIcon />
+              </span>
+              <input
+                className="search__input"
+                type="search"
+                value={input}
+                onChange={(e) => {
+                  setAgentItems(null)
+                  setViewingProjectId(null)
+                  setInput(e.target.value)
+                }}
+                placeholder={`Search ${TOTAL.toLocaleString()} catalogued artworks: Illidan, dragon, Ironforge…`}
+                aria-label="Search the catalogue"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </form>
+            <div className="toolbar__row">
+              <div className="chips" role="tablist" aria-label="Collections">
+                {QUICK.map((c) => (
+                  <button
+                    key={c.label}
+                    type="button"
+                    role="tab"
+                    aria-selected={!viewingResults && query === c.query}
+                    className={`chip${!viewingResults && query === c.query ? ' chip--on' : ''}`}
+                    onClick={() => browse(c.query)}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              {tally}
             </div>
-            {tally}
           </div>
 
           <main className="stage" ref={gridTop}>
