@@ -45,9 +45,10 @@ Pages. Deployed with the `gh-pages` npm package (`--dotfiles` keeps `.nojekyll`)
 
 ## Regenerating the index
 
-The index is built by two throwaway scripts (kept out of the repo):
+The index is built by the scripts in `tools/` (see `tools/README.md`):
 
 1. `harvest.py` — runs ~125 MediaWiki file-namespace searches, resolves image info, and extracts
    artist credits from page wikitext into `/tmp/artworks_raw.json`.
-2. `build_index.py` — scores/filters candidates, downloads 640px thumbnails, converts them to
-   800px WebP, and writes `src/data/artworks.json` + `public/images/*.webp`.
+2. `build_index.py` — downloads 640px thumbnails, converts them to WebP, and writes
+   `src/data/artworks.json` + `public/images/*.webp`.
+3. `clean_index.py`, `clean2.py`, `clean3.py` — tidy artist credits and titles, prune orphan images.
