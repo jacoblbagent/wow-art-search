@@ -90,60 +90,62 @@ export default function AgentPanel({ onArtworks, disabled }: Props) {
         <span className="agent__hint">Local model, live wiki access</span>
       </div>
 
-      {turns.length > 0 && (
-        <div className="agent__transcript" ref={transcript}>
-          {turns.map((turn, i) => (
-            <div key={i} className={`turn turn--${turn.role}`}>
-              <span className="turn__who">{turn.role === 'user' ? 'You' : 'Agent'}</span>
-              <div className="turn__body">
-                <p className="turn__text">{turn.content}</p>
-                {turn.citations && turn.citations.length > 0 && (
-                  <p className="turn__sources">
-                    {turn.citations.map((c) => (
-                      <a key={c.url} href={c.url} target="_blank" rel="noreferrer noopener">
-                        {c.label}
-                      </a>
-                    ))}
-                  </p>
-                )}
-                {turn.steps ? <span className="turn__meta">{turn.steps} steps</span> : null}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {draft && (
-        <div className="turn turn--assistant">
-          <span className="turn__who">Agent</span>
-          <div className="turn__body">
-            {draft.statuses.length > 0 && (
-              <ul className="steps">
-                {draft.statuses.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            )}
-            {draft.reasoning && (
-              <details className="think">
-                <summary>Reasoning</summary>
-                <p>{draft.reasoning}</p>
-              </details>
-            )}
-            {draft.text ? <p className="turn__text">{draft.text}</p> : <p className="turn__text dim">Thinking…</p>}
+      <div className="agent__transcript" ref={transcript}>
+        {turns.length === 0 && !draft && (
+          <div className="agent__seeds">
+            {SUGGESTIONS.map((s) => (
+              <button key={s} type="button" className="chip" onClick={() => send(s)} disabled={disabled}>
+                {s}
+              </button>
+            ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {turns.length === 0 && !draft && (
-        <div className="agent__seeds">
-          {SUGGESTIONS.map((s) => (
-            <button key={s} type="button" className="chip" onClick={() => send(s)} disabled={disabled}>
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+        {turns.map((turn, i) => (
+          <div key={i} className={`turn turn--${turn.role}`}>
+            <span className="turn__who">{turn.role === 'user' ? 'You' : 'Agent'}</span>
+            <div className="turn__body">
+              <p className="turn__text">{turn.content}</p>
+              {turn.citations && turn.citations.length > 0 && (
+                <p className="turn__sources">
+                  {turn.citations.map((c) => (
+                    <a key={c.url} href={c.url} target="_blank" rel="noreferrer noopener">
+                      {c.label}
+                    </a>
+                  ))}
+                </p>
+              )}
+              {turn.steps ? <span className="turn__meta">{turn.steps} steps</span> : null}
+            </div>
+          </div>
+        ))}
+
+        {draft && (
+          <div className="turn turn--assistant">
+            <span className="turn__who">Agent</span>
+            <div className="turn__body">
+              {draft.statuses.length > 0 && (
+                <ul className="steps">
+                  {draft.statuses.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              )}
+              {draft.reasoning && (
+                <details className="think">
+                  <summary>Reasoning</summary>
+                  <p>{draft.reasoning}</p>
+                </details>
+              )}
+              {draft.text ? (
+                <p className="turn__text">{draft.text}</p>
+              ) : (
+                <p className="turn__text dim">Thinking…</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       <form
         className="agent__form"

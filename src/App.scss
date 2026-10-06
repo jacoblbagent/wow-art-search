@@ -156,12 +156,24 @@
 
 /* ---------- agent ---------- */
 
+.layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.browse {
+  min-width: 0;
+}
+
 .agent {
+  order: -1;
   margin-top: 20px;
   padding: 18px 20px 20px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
 }
 
 .agent__head {
@@ -170,6 +182,7 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  flex: 0 0 auto;
 }
 
 .agent__head h2 {
@@ -185,7 +198,9 @@
 }
 
 .agent__transcript {
-  max-height: 330px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 54vh;
   overflow-y: auto;
   margin: 16px 0 0;
   padding: 16px 2px 4px;
@@ -298,7 +313,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 16px;
 }
 
 .agent__form {
@@ -306,6 +320,7 @@
   align-items: flex-end;
   gap: 10px;
   margin-top: 18px;
+  flex: 0 0 auto;
 }
 
 .agent__input {
@@ -724,5 +739,62 @@ code {
 
   .lightbox__figure {
     padding: 10px;
+  }
+}
+
+/* ---------- docked agent sidebar (wide screens) ---------- */
+
+@media (min-width: 1100px) {
+  #root {
+    height: 100vh;
+  }
+
+  .app {
+    height: 100%;
+    max-width: 1600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .masthead {
+    flex: 0 0 auto;
+  }
+
+  .layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 404px;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 22px;
+    padding: 22px 0;
+  }
+
+  .browse {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: var(--bg);
+    margin-top: 0;
+    padding: 0 0 16px;
+  }
+
+  .agent {
+    order: 0;
+    height: 100%;
+    margin-top: 0;
+    overflow: hidden;
+  }
+
+  .agent__transcript {
+    max-height: none;
   }
 }
