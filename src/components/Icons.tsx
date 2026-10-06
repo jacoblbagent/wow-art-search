@@ -25,3 +25,12 @@ export function ExternalIcon() {
     </svg>
   )
 }
+
+export function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="M14 8a6 6 0 1 1-6-6c1.68 0 3.29.67 4.49 1.83L14 5.33" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 2v3.33h-3.33" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}

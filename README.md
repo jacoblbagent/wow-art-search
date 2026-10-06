@@ -65,6 +65,7 @@ Reachable in the tailnet at `http://jlb-hermes.tail1caa84.ts.net:3090` (mapped w
 
 - `POST /api/ask` → server-sent events: `status`, `reasoning`, `delta`, `artworks`, `done`, `error`
 - `GET /api/artworks?q=&limit=` → catalogue search without the model
+- `GET /api/img?src=<wiki file url>` → same-origin image proxy (locked to warcraft.wiki.gg `/images/`)
 - `GET /api/health` → model, endpoint and catalogue size
 
 ## Data
@@ -90,6 +91,12 @@ npm run deploy   # build with base=/wow-art-search/ then push dist/ to the gh-pa
 - **Cloudflare challenges browser-shaped requests to the wiki API.** A purely client-side fetch is
   blocked with no CORS header, which is why the catalogue is bundled and the live search runs
   server-side. Plain (non-browser) User-Agents pass fine.
+- **Wiki images cannot be hotlinked from a browser.** Cloudflare answers a browser request that
+  carries a foreign `Referer` with a 403 challenge whose response includes
+  `cross-origin-resource-policy: same-origin` — so Chrome kills the `<img>` with
+  `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin` (curl alone doesn't reveal this, since a cache HIT is
+  served without the challenge). Live-wiki images therefore go through `/api/img`, which fetches
+  server-side with a plain User-Agent and serves them from our own origin.
 - **Use `res.on('close')`, not `req.on('close')`, for SSE abort detection.** In modern Node
   `req`'s `close` fires as soon as the POST body is consumed, which silently killed every stream.
 - Ollama returns the model's thinking in a separate `reasoning` field; the UI shows it in a

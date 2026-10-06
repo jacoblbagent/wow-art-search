@@ -73,6 +73,16 @@ export function pageUrl(title: string): string {
   return `https://warcraft.wiki.gg/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`
 }
 
+/**
+ * Wiki images cannot be embedded directly: Cloudflare answers a hotlinked
+ * browser request with a 403 challenge carrying `cross-origin-resource-policy:
+ * same-origin`, so the <img> is blocked. Serving them through our own origin
+ * fixes that — plain (non-browser) server-side requests are never challenged.
+ */
+export function proxyImage(url: string): string {
+  return `/api/img?src=${encodeURIComponent(url)}`
+}
+
 async function getJson(params: Record<string, string>, timeoutMs = 30000): Promise<Record<string, unknown>> {
   const url = new URL(config.wikiApi)
   url.search = new URLSearchParams({ action: 'query', format: 'json', ...params }).toString()
@@ -140,8 +150,8 @@ export async function searchWiki(
       id: String(p.pageid),
       title,
       artist,
-      src,
-      full: ii.url ?? src,
+      src: proxyImage(src),
+      full: proxyImage(ii.url ?? src),
       page: pageUrl(p.title),
       w: ii.width ?? 0,
       h: ii.height ?? 0,

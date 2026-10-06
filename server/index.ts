@@ -28,6 +28,66 @@ app.get('/api/artworks', (req, res) => {
   res.json({ query: q, total, items })
 })
 
+/**
+ * Same-origin image proxy for Warcraft Wiki files. Hotlinking them straight
+ * from the browser fails (Cloudflare 403 + CORP: same-origin), so the server
+ * fetches with a plain non-browser User-Agent, which is never challenged.
+ * Locked to the wiki host and its /images/ path to avoid being an open proxy.
+ */
+const IMAGE_HOST = 'warcraft.wiki.gg'
+const MAX_IMAGE_BYTES = 16 * 1024 * 1024
+
+app.get('/api/img', async (req, res) => {
+  const raw = String(req.query.src ?? '')
+  let target: URL
+  try {
+    target = new URL(raw)
+  } catch {
+    res.status(400).type('text/plain').send('bad url')
+    return
+  }
+  if (target.protocol !== 'https:' || target.hostname !== IMAGE_HOST || !target.pathname.startsWith('/images/')) {
+    res.status(403).type('text/plain').send('host not allowed')
+    return
+  }
+
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 30000)
+  try {
+    const upstream = await fetch(target, {
+      headers: { 'User-Agent': config.wikiUa, Accept: 'image/*' },
+      signal: ctrl.signal,
+    })
+    if (!upstream.ok || !upstream.body) {
+      res.status(502).type('text/plain').send(`upstream ${upstream.status}`)
+      return
+    }
+    const contentType = upstream.headers.get('content-type') ?? ''
+    const declared = Number(upstream.headers.get('content-length') ?? 0)
+    if (!contentType.startsWith('image/') || declared > MAX_IMAGE_BYTES) {
+      res.status(415).type('text/plain').send('not a usable image')
+      return
+    }
+    const body = Buffer.from(await upstream.arrayBuffer())
+    if (body.byteLength > MAX_IMAGE_BYTES) {
+      res.status(413).type('text/plain').send('image too large')
+      return
+    }
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Content-Length': String(body.byteLength),
+      'Cache-Control': 'public, max-age=604800, immutable',
+      'X-Content-Type-Options': 'nosniff',
+    })
+    res.end(body)
+  } catch {
+    if (!res.headersSent) res.status(504).type('text/plain').send('image fetch failed')
+    else res.end()
+  } finally {
+    clearTimeout(timer)
+  }
+})
+
 /** The agent. Server-sent events: status / reasoning / delta / artworks / done. */
 app.post('/api/ask', async (req, res) => {
   const body = req.body as { message?: unknown; history?: unknown }
