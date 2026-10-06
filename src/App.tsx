@@ -119,6 +119,16 @@ export default function App() {
   const showBusy = useCallback((value: boolean) => setBusy(value), [])
   const showStarted = useCallback((value: boolean) => setStarted(value), [])
 
+  /**
+   * A question was asked, so the gallery is now the agent's to fill: leave any
+   * project you were viewing and clear the old results before the new ones
+   * stream in (the skeleton covers the gap).
+   */
+  const startAsk = useCallback(() => {
+    setViewingProjectId(null)
+    setAgentItems(null)
+  }, [])
+
   const contextLine = agentItems?.length ? null : viewingProject ? (
     <>
       Viewing project <strong>{viewingProject.name}</strong> — {viewingProject.items.length} saved
@@ -129,9 +139,9 @@ export default function App() {
     </>
   ) : null
 
-  const emptyCopy = projectEmpty && viewingProject
+  const emptyCopy = viewingProject && projectEmpty
     ? `Nothing saved in ${viewingProject.name} yet — hover an artwork and press the bookmark to add it.`
-    : agentItems
+    : started
       ? 'No artwork came back for that. Try naming a character, a race or a zone.'
       : 'Ask the agent for artwork and what it finds will appear here.'
 
@@ -333,6 +343,7 @@ export default function App() {
             onResults={showResults}
             onBusy={showBusy}
             onStarted={showStarted}
+            onAsk={startAsk}
             disabled={hasBackend === false}
           />
         </div>

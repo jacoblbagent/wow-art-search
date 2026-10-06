@@ -10,6 +10,8 @@ interface Props {
   onBusy?: (busy: boolean) => void
   /** the active chat has been used at all */
   onStarted?: (started: boolean) => void
+  /** a question was just asked — the gallery is about to be replaced */
+  onAsk?: () => void
   disabled?: boolean
 }
 
@@ -159,7 +161,7 @@ function titleOf(chat: Chat): string {
  * in-flight run. Runs continue streaming while you look at another chat, so
  * several can be in flight at once.
  */
-export default function AgentPanel({ onResults, onBusy, onStarted, disabled }: Props) {
+export default function AgentPanel({ onResults, onBusy, onStarted, onAsk, disabled }: Props) {
   // Conversations and the selection live in one object so every update is
   // atomic — closing two chats in quick succession can't clobber itself the way
   // two separate setState calls reading render-scope state would.
@@ -217,9 +219,14 @@ export default function AgentPanel({ onResults, onBusy, onStarted, disabled }: P
     if (!chat || !message || chat.busy || disabled) return
     const history = chat.turns.map(({ role, content }) => ({ role, content }))
 
+    // The gallery answers the question just asked, so drop whatever the last
+    // one left behind. Within this run results still accumulate — one question
+    // often takes several searches.
+    onAsk?.()
     patch(chat.id, (c) => ({
       turns: [...c.turns, { role: 'user', content: message }],
       input: '',
+      artworks: [],
       draft: { statuses: [], reasoning: '', text: '' },
       busy: true,
     }))

@@ -42,6 +42,11 @@ Two states, driven by whether the active chat has been used:
 - **Split** — the moment you send a message the chat docks to the right and the gallery takes the
   middle: `sidebar | gallery | chat`. The gallery column is the widest of the three.
 
+The gallery always answers the **latest** question. Asking something new clears the grid (back to
+the skeleton) and fills it with that run's results, so it never becomes a pile of every answer so
+far — the transcript is where the history lives. Within one question results still accumulate,
+because a single question often takes several searches.
+
 While the agent is working the gallery shows **shimmering skeleton cards**, and the chat shows
 skeleton lines until the first tokens arrive, so the wait has a shape. On narrow screens the panels
 stack (chat first) and the page scrolls normally; from 1100px up the whole app is one screen-height
