@@ -173,7 +173,6 @@ export default function AgentPanel({ onArtworks, disabled }: Props) {
     <section className="agent" aria-label="Art agent">
       <div className="agent__head">
         <h2>Art agent</h2>
-        <span className="agent__hint">Local model, live wiki access</span>
       </div>
 
       <div className="agent__transcript" ref={transcript}>
