@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TOTAL, searchArt } from './search.ts'
 import type { ArtItem } from './types.ts'
 import ArtCard from './components/ArtCard.tsx'
@@ -56,15 +56,10 @@ export default function App() {
   const page = useMemo(() => searchArt(query, limit), [query, limit])
   const showing = agentItems ?? page.items
 
-  const addArtworks = (items: ArtItem[]) => {
-    setAgentItems((prev) => {
-      const base = prev ?? []
-      const seen = new Set(base.map((i) => i.src))
-      return [...base, ...items.filter((i) => !seen.has(i.src))]
-    })
-    const el = gridTop.current
-    if (el) window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-  }
+  // The gallery mirrors whichever chat is active in the agent panel.
+  const showResults = useCallback((items: ArtItem[] | null) => {
+    setAgentItems(items)
+  }, [])
 
   const browse = (q: string) => {
     setAgentItems(null)
@@ -73,7 +68,7 @@ export default function App() {
 
   const tally = agentItems ? (
     <button type="button" className="tally__reset" onClick={() => setAgentItems(null)}>
-      Clear results
+      View catalogue
     </button>
   ) : null
 
@@ -176,7 +171,7 @@ export default function App() {
           </footer>
         </div>
 
-        <AgentPanel onArtworks={addArtworks} disabled={agentReady === false} />
+        <AgentPanel onResults={showResults} disabled={agentReady === false} />
       </div>
 
       {selected && <Lightbox item={selected} onClose={() => setSelected(null)} />}

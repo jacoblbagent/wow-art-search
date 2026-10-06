@@ -184,7 +184,7 @@
   min-height: 0;
   max-height: 54vh;
   overflow-y: auto;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   padding: 16px 2px 4px;
   border-top: 1px solid var(--line);
   display: flex;
@@ -289,6 +289,75 @@
   font-size: var(--step-2);
   color: var(--ink-2);
   white-space: pre-wrap;
+}
+
+/* ---------- chat tabs ---------- */
+
+.chatbar {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+  overflow-x: auto;
+  padding: 14px 0 2px;
+  scrollbar-width: thin;
+}
+
+.chatbar__item {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  transition: border-color 0.16s ease;
+}
+
+.chatbar__item:hover {
+  border-color: var(--line-strong);
+}
+
+.chatbar__item--on {
+  border-color: var(--accent);
+}
+
+.chatbar__tab {
+  max-width: 132px;
+  padding: 5px 2px 5px 9px;
+  font: inherit;
+  font-size: var(--step-1);
+  font-weight: 500;
+  color: var(--ink-2);
+  background: none;
+  border: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.chatbar__item--on .chatbar__tab {
+  color: var(--accent-soft);
+}
+
+.chatbar__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 7px 4px 3px;
+  color: var(--ink-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.chatbar__close:hover {
+  color: var(--ink);
+}
+
+.chatbar__close svg {
+  width: 12px;
+  height: 12px;
 }
 
 .agent__intro {
@@ -740,6 +809,14 @@ code {
   .ghost,
   .seeds__more {
     min-height: 44px;
+  }
+
+  .chatbar__tab {
+    padding: 9px 4px 9px 11px;
+  }
+
+  .chatbar__close {
+    padding: 8px 9px 8px 4px;
   }
 
   .grid {

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { askAgent } from '../agent.ts'
 import type { ArtItem, ChatTurn } from '../types.ts'
-import { RefreshIcon } from './Icons.tsx'
+import { CloseIcon, PlusIcon, RefreshIcon } from './Icons.tsx'
 
 interface Props {
-  onArtworks: (items: ArtItem[]) => void
+  onResults: (items: ArtItem[] | null) => void
   disabled?: boolean
 }
 
@@ -12,6 +12,17 @@ interface Draft {
   statuses: string[]
   reasoning: string
   text: string
+}
+
+interface Chat {
+  id: string
+  turns: ChatTurn[]
+  draft: Draft | null
+  busy: boolean
+  seeds: string[]
+  seedRound: number
+  input: string
+  artworks: ArtItem[]
 }
 
 /**
@@ -84,6 +95,23 @@ const SEED_POOL = [
 ]
 
 const SEED_COUNT = 4
+const TITLE_MAX = 24
+
+let chatSeq = 0
+
+function newChat(): Chat {
+  chatSeq += 1
+  return {
+    id: `chat-${Date.now()}-${chatSeq}`,
+    turns: [],
+    draft: null,
+    busy: false,
+    seeds: pickSeeds(SEED_COUNT),
+    seedRound: 0,
+    input: '',
+    artworks: [],
+  }
+}
 
 function pickSeeds(count: number, avoid: string[] = []): string[] {
   const avoidKey = [...avoid].sort().join('|')
@@ -99,87 +127,205 @@ function pickSeeds(count: number, avoid: string[] = []): string[] {
   return SEED_POOL.slice(0, count)
 }
 
-export default function AgentPanel({ onArtworks, disabled }: Props) {
-  const [turns, setTurns] = useState<ChatTurn[]>([])
-  const [draft, setDraft] = useState<Draft | null>(null)
-  const [input, setInput] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [seeds, setSeeds] = useState<string[]>(() => pickSeeds(SEED_COUNT))
-  const [seedRound, setSeedRound] = useState(0)
-  const abort = useRef<AbortController | null>(null)
+function titleOf(chat: Chat): string {
+  const first = chat.turns.find((t) => t.role === 'user')
+  if (!first) return 'New chat'
+  const text = first.content.replace(/\s+/g, ' ').trim()
+  return text.length > TITLE_MAX ? `${text.slice(0, TITLE_MAX - 1)}…` : text
+}
+
+/**
+ * Multiple conversations, each with its own transcript, artwork results and
+ * in-flight run. Runs continue streaming while you look at another chat, so
+ * several can be in flight at once.
+ */
+export default function AgentPanel({ onResults, disabled }: Props) {
+  // Conversations and the selection live in one object so every update is
+  // atomic — closing two chats in quick succession can't clobber itself the way
+  // two separate setState calls reading render-scope state would.
+  const [board, setBoard] = useState(() => {
+    const first = newChat()
+    return { chats: [first], activeId: first.id }
+  })
+  const { chats } = board
+  const active = chats.find((c) => c.id === board.activeId) ?? chats[0]
+
   const transcript = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const aborts = useRef<Map<string, AbortController>>(new Map())
+
+  const patch = useCallback((id: string, fn: (chat: Chat) => Partial<Chat>) => {
+    setBoard((prev) => ({ ...prev, chats: prev.chats.map((c) => (c.id === id ? { ...c, ...fn(c) } : c)) }))
+  }, [])
+
+  const select = (id: string) => setBoard((prev) => ({ ...prev, activeId: id }))
+
+  // Publish the active chat's results to the gallery. Identity of the artworks
+  // array only changes when that chat actually gains artwork, or on switch.
+  const activeArtworks = active?.artworks
+  useEffect(() => {
+    onResults(activeArtworks && activeArtworks.length ? activeArtworks : null)
+  }, [activeArtworks, onResults])
 
   useEffect(() => {
     const el = transcript.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [turns, draft])
+  }, [board.activeId, active?.turns.length, active?.draft?.text])
 
-  useEffect(() => () => abort.current?.abort(), [])
+  useEffect(
+    () => () => {
+      aborts.current.forEach((c) => c.abort())
+    },
+    [],
+  )
 
   const send = async (raw: string) => {
+    const chat = active
     const message = raw.trim()
-    if (!message || busy || disabled) return
-    const history = turns.map(({ role, content }) => ({ role, content }))
-    setTurns((t) => [...t, { role: 'user', content: message }])
-    setInput('')
-    setDraft({ statuses: [], reasoning: '', text: '' })
-    setBusy(true)
+    if (!chat || !message || chat.busy || disabled) return
+    const history = chat.turns.map(({ role, content }) => ({ role, content }))
+
+    patch(chat.id, (c) => ({
+      turns: [...c.turns, { role: 'user', content: message }],
+      input: '',
+      draft: { statuses: [], reasoning: '', text: '' },
+      busy: true,
+    }))
+
     const controller = new AbortController()
-    abort.current = controller
+    aborts.current.set(chat.id, controller)
+
     try {
       await askAgent(
         message,
         history,
         {
-          onStatus: (text) => setDraft((d) => (d ? { ...d, statuses: [...d.statuses, text] } : d)),
-          onReasoning: (text) => setDraft((d) => (d ? { ...d, reasoning: d.reasoning + text } : d)),
-          onDelta: (text) => setDraft((d) => (d ? { ...d, text: d.text + text } : d)),
-          onArtworks,
-          onDone: ({ answer, citations, steps }) => {
-            setTurns((t) => [...t, { role: 'assistant', content: answer, citations, steps }])
-            setDraft(null)
-            setBusy(false)
-          },
-          onError: (message) => {
-            setDraft(null)
-            setTurns((t) => [...t, { role: 'assistant', content: `Something went wrong: ${message}` }])
-            setBusy(false)
-          },
+          onStatus: (text) =>
+            patch(chat.id, (c) => (c.draft ? { draft: { ...c.draft, statuses: [...c.draft.statuses, text] } } : {})),
+          onReasoning: (text) =>
+            patch(chat.id, (c) => (c.draft ? { draft: { ...c.draft, reasoning: c.draft.reasoning + text } } : {})),
+          onDelta: (text) => patch(chat.id, (c) => (c.draft ? { draft: { ...c.draft, text: c.draft.text + text } } : {})),
+          onArtworks: (items) =>
+            patch(chat.id, (c) => {
+              const seen = new Set(c.artworks.map((a) => a.src))
+              return { artworks: [...c.artworks, ...items.filter((i) => !seen.has(i.src))] }
+            }),
+          onDone: ({ answer, citations, steps }) =>
+            patch(chat.id, (c) => ({
+              turns: [...c.turns, { role: 'assistant', content: answer, citations, steps }],
+              draft: null,
+              busy: false,
+            })),
+          onError: (message) =>
+            patch(chat.id, (c) => ({
+              turns: [...c.turns, { role: 'assistant', content: `Something went wrong: ${message}` }],
+              draft: null,
+              busy: false,
+            })),
         },
         controller.signal,
       )
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') {
-        setDraft(null)
-        setTurns((t) => [...t, { role: 'assistant', content: `Could not reach the agent: ${(e as Error).message}` }])
+      if ((e as Error).name === 'AbortError') {
+        // keep whatever the model had already written
+        patch(chat.id, (c) =>
+          c.draft?.text
+            ? {
+                turns: [...c.turns, { role: 'assistant', content: `${c.draft.text} (stopped)` }],
+                draft: null,
+                busy: false,
+              }
+            : { draft: null, busy: false },
+        )
+      } else {
+        patch(chat.id, (c) => ({
+          turns: [...c.turns, { role: 'assistant', content: `Could not reach the agent: ${(e as Error).message}` }],
+          draft: null,
+          busy: false,
+        }))
       }
-      setBusy(false)
     } finally {
-      abort.current = null
+      aborts.current.delete(chat.id)
+      patch(chat.id, () => ({ busy: false, draft: null }))
     }
   }
 
   const stop = () => {
-    abort.current?.abort()
-    setBusy(false)
+    if (active) aborts.current.get(active.id)?.abort()
   }
 
   const refreshSeeds = () => {
-    setSeeds((prev) => pickSeeds(SEED_COUNT, prev))
-    setSeedRound((r) => r + 1)
+    if (active) patch(active.id, (c) => ({ seeds: pickSeeds(SEED_COUNT, c.seeds), seedRound: c.seedRound + 1 }))
+  }
+
+  const addChat = () => {
+    setBoard((prev) => {
+      const chat = newChat()
+      return { chats: [...prev.chats, chat], activeId: chat.id }
+    })
+    window.requestAnimationFrame(() => inputRef.current?.focus())
+  }
+
+  const closeChat = (id: string) => {
+    aborts.current.get(id)?.abort()
+    aborts.current.delete(id)
+    setBoard((prev) => {
+      const index = prev.chats.findIndex((c) => c.id === id)
+      const remaining = prev.chats.filter((c) => c.id !== id)
+      if (!remaining.length) {
+        const fresh = newChat()
+        return { chats: [fresh], activeId: fresh.id }
+      }
+      const activeId =
+        prev.activeId === id ? remaining[Math.min(index, remaining.length - 1)].id : prev.activeId
+      return { chats: remaining, activeId }
+    })
   }
 
   return (
     <section className="agent" aria-label="Art agent">
       <div className="agent__head">
         <h2>Art agent</h2>
+        <button type="button" className="seeds__more" onClick={addChat} disabled={disabled}>
+          <PlusIcon />
+          New chat
+        </button>
+      </div>
+
+      <div className="chatbar">
+        {chats.map((chat) => {
+          const isActive = chat.id === active?.id
+          const title = titleOf(chat)
+          return (
+            <span key={chat.id} className={`chatbar__item${isActive ? ' chatbar__item--on' : ''}`}>
+              <button
+                type="button"
+                className="chatbar__tab"
+                aria-current={isActive ? 'true' : undefined}
+                title={title}
+                onClick={() => select(chat.id)}
+              >
+                {title}
+                {chat.busy ? ' …' : ''}
+              </button>
+              <button
+                type="button"
+                className="chatbar__close"
+                aria-label={`Close ${title}`}
+                onClick={() => closeChat(chat.id)}
+              >
+                <CloseIcon />
+              </button>
+            </span>
+          )
+        })}
       </div>
 
       <div className="agent__transcript" ref={transcript}>
-        {turns.length === 0 && !draft && (
+        {active.turns.length === 0 && !active.draft && (
           <div className="agent__intro">
-            <div className="agent__seeds" key={seedRound}>
-              {seeds.map((s) => (
+            <div className="agent__seeds" key={active.seedRound}>
+              {active.seeds.map((s) => (
                 <button key={s} type="button" className="chip" onClick={() => send(s)} disabled={disabled}>
                   {s}
                 </button>
@@ -198,7 +344,7 @@ export default function AgentPanel({ onArtworks, disabled }: Props) {
           </div>
         )}
 
-        {turns.map((turn, i) => (
+        {active.turns.map((turn, i) => (
           <div key={i} className={`turn turn--${turn.role}`}>
             <span className="turn__who">{turn.role === 'user' ? 'You' : 'Agent'}</span>
             <div className="turn__body">
@@ -217,25 +363,25 @@ export default function AgentPanel({ onArtworks, disabled }: Props) {
           </div>
         ))}
 
-        {draft && (
+        {active.draft && (
           <div className="turn turn--assistant">
             <span className="turn__who">Agent</span>
             <div className="turn__body">
-              {draft.statuses.length > 0 && (
+              {active.draft.statuses.length > 0 && (
                 <ul className="steps">
-                  {draft.statuses.map((s, i) => (
+                  {active.draft.statuses.map((s, i) => (
                     <li key={i}>{s}</li>
                   ))}
                 </ul>
               )}
-              {draft.reasoning && (
+              {active.draft.reasoning && (
                 <details className="think">
                   <summary>Reasoning</summary>
-                  <p>{draft.reasoning}</p>
+                  <p>{active.draft.reasoning}</p>
                 </details>
               )}
-              {draft.text ? (
-                <p className="turn__text">{draft.text}</p>
+              {active.draft.text ? (
+                <p className="turn__text">{active.draft.text}</p>
               ) : (
                 <p className="turn__text dim">Thinking…</p>
               )}
@@ -248,29 +394,30 @@ export default function AgentPanel({ onArtworks, disabled }: Props) {
         className="agent__form"
         onSubmit={(e) => {
           e.preventDefault()
-          void send(input)
+          void send(active.input)
         }}
       >
         <textarea
+          ref={inputRef}
           className="agent__input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          value={active.input}
+          onChange={(e) => patch(active.id, () => ({ input: e.target.value }))}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
-              void send(input)
+              void send(active.input)
             }
           }}
           rows={2}
           placeholder="Ask for art, artists or lore — search the catalogue and the live wiki"
           aria-label="Ask the art agent"
         />
-        {busy ? (
+        {active.busy ? (
           <button type="button" className="ghost" onClick={stop}>
             Stop
           </button>
         ) : (
-          <button type="submit" className="primary" disabled={!input.trim() || disabled}>
+          <button type="submit" className="primary" disabled={!active.input.trim() || disabled}>
             Ask
           </button>
         )}

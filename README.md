@@ -28,6 +28,18 @@ matching artwork into the grid below.
 Example prompts: *fel orc concept art* · *who painted the most Dragonflight art?* · *use the live
 wiki to find gnome tinker artwork* · *moody Sylvanas pieces*.
 
+### Multiple chats
+
+The panel holds several conversations at once — **New chat** adds one, the tab strip switches
+between them (titles come from the first thing you asked), and each tab has its own close button.
+Every chat keeps its own transcript, typed-but-unsent draft, example prompts and artwork results;
+the gallery on the left mirrors whichever chat is active. Runs are not tied to the visible tab:
+start one, switch away, and it keeps streaming — a running chat is marked `…` in the strip, and
+**Stop** only cancels the chat you are looking at.
+
+Note: the local model shares one GPU. Simultaneous runs do overlap rather than blocking each other,
+but token throughput is split, so two questions together take longer than either alone.
+
 ## Stack
 
 React 19 + TypeScript + Vite + SCSS front end; Express 5 backend; the agent loop runs against a
