@@ -16,6 +16,7 @@ const QUICK: { label: string; query: string }[] = [
   { label: 'Orcs', query: 'orc' },
   { label: 'Armor & Weapons', query: 'armor' },
   { label: 'Architecture', query: 'architecture' },
+  { label: 'Biomes', query: 'biome' },
 ]
 
 const PAGE_SIZE = 48
