@@ -223,138 +223,144 @@ export default function App() {
   ) : null
 
   return (
-    <div className="app">
-      <h1 className="sr-only">Azeroth Art Search</h1>
+    <>
+      <div className="app">
+        <h1 className="sr-only">Azeroth Art Search</h1>
 
-      {hasBackend === false && (
-        <p className="notice notice--warn">
-          The agent backend isn’t running, so the agent and projects are unavailable. Start it with{' '}
-          <code>npm start</code>.
-        </p>
-      )}
-      {projectError && <p className="notice notice--warn">{projectError}</p>}
+        {hasBackend === false && (
+          <p className="notice notice--warn">
+            The agent backend isn’t running, so the agent and projects are unavailable. Start it with{' '}
+            <code>npm start</code>.
+          </p>
+        )}
+        {projectError && <p className="notice notice--warn">{projectError}</p>}
 
-      <div className={`layout layout--${split ? 'split' : 'focus'}`}>
-        <ProjectsPanel
-          projects={projects}
-          activeId={activeProjectId}
-          onSelect={(id) => {
-            setActiveProjectId(id)
-            setViewingProjectId(id)
-            if (id) setAgentItems(null)
-          }}
-          onCreate={createProject}
-          onRename={renameProject}
-          onDelete={deleteProject}
-          disabled={hasBackend === false}
-        />
+        <div className={`layout layout--${split ? 'split' : 'focus'}`}>
+          <ProjectsPanel
+            projects={projects}
+            activeId={activeProjectId}
+            onSelect={(id) => {
+              setActiveProjectId(id)
+              setViewingProjectId(id)
+              if (id) setAgentItems(null)
+            }}
+            onCreate={createProject}
+            onRename={renameProject}
+            onDelete={deleteProject}
+            disabled={hasBackend === false}
+          />
 
-        {split && (
-          <main className="stage" aria-busy={busy || undefined}>
-            {CATALOGUE_ENABLED && (
-              <div className="toolbar">
-                <form
-                  className="search"
-                  role="search"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                  }}
-                >
-                  <span className="search__icon" aria-hidden="true">
-                    <SearchIcon />
-                  </span>
-                  <input
-                    className="search__input"
-                    type="search"
-                    value={input}
-                    onChange={(e) => {
-                      setAgentItems(null)
-                      setViewingProjectId(null)
-                      setInput(e.target.value)
+          {split && (
+            <main className="stage" aria-busy={busy || undefined}>
+              {CATALOGUE_ENABLED && (
+                <div className="toolbar">
+                  <form
+                    className="search"
+                    role="search"
+                    onSubmit={(e) => {
+                      e.preventDefault()
                     }}
-                    placeholder={`Search ${TOTAL.toLocaleString()} catalogued artworks: Illidan, dragon, Ironforge…`}
-                    aria-label="Search the catalogue"
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                </form>
-                <div className="toolbar__row">
-                  <div className="chips" role="tablist" aria-label="Collections">
-                    {QUICK.map((c) => (
-                      <button
-                        key={c.label}
-                        type="button"
-                        role="tab"
-                        aria-selected={!viewingResults && query === c.query}
-                        className={`chip${!viewingResults && query === c.query ? ' chip--on' : ''}`}
-                        onClick={() => browse(c.query)}
-                      >
-                        {c.label}
-                      </button>
+                  >
+                    <span className="search__icon" aria-hidden="true">
+                      <SearchIcon />
+                    </span>
+                    <input
+                      className="search__input"
+                      type="search"
+                      value={input}
+                      onChange={(e) => {
+                        setAgentItems(null)
+                        setViewingProjectId(null)
+                        setInput(e.target.value)
+                      }}
+                      placeholder={`Search ${TOTAL.toLocaleString()} catalogued artworks: Illidan, dragon, Ironforge…`}
+                      aria-label="Search the catalogue"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  </form>
+                  <div className="toolbar__row">
+                    <div className="chips" role="tablist" aria-label="Collections">
+                      {QUICK.map((c) => (
+                        <button
+                          key={c.label}
+                          type="button"
+                          role="tab"
+                          aria-selected={!viewingResults && query === c.query}
+                          className={`chip${!viewingResults && query === c.query ? ' chip--on' : ''}`}
+                          onClick={() => browse(c.query)}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                    {tally}
+                  </div>
+                </div>
+              )}
+
+              {showing.length > 0 ? (
+                <>
+                  {contextLine && <p className="viewing">{contextLine}</p>}
+                  <div className="grid">
+                    {showing.map((it) => (
+                      <ArtCard
+                        key={`${it.origin}-${it.id}`}
+                        item={it}
+                        onOpen={setSelected}
+                        saved={activeProject ? savedSrcs.has(it.src) : undefined}
+                        onToggleSave={activeProject ? toggleSaveForActive : undefined}
+                      />
                     ))}
                   </div>
-                  {tally}
-                </div>
-              </div>
-            )}
+                  {!viewingResults && page.hasMore && (
+                    <div className="more">
+                      <button type="button" className="ghost" onClick={() => setLimit((v) => v + PAGE_SIZE)}>
+                        Show more artwork ({page.total - page.items.length} left)
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : busy ? (
+                <SkeletonGrid />
+              ) : (
+                <p className="notice">{emptyCopy}</p>
+              )}
+            </main>
+          )}
 
-            {showing.length > 0 ? (
-              <>
-                {contextLine && <p className="viewing">{contextLine}</p>}
-                <div className="grid">
-                  {showing.map((it) => (
-                    <ArtCard
-                      key={`${it.origin}-${it.id}`}
-                      item={it}
-                      onOpen={setSelected}
-                      saved={activeProject ? savedSrcs.has(it.src) : undefined}
-                      onToggleSave={activeProject ? toggleSaveForActive : undefined}
-                    />
-                  ))}
-                </div>
-                {!viewingResults && page.hasMore && (
-                  <div className="more">
-                    <button type="button" className="ghost" onClick={() => setLimit((v) => v + PAGE_SIZE)}>
-                      Show more artwork ({page.total - page.items.length} left)
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : busy ? (
-              <SkeletonGrid />
-            ) : (
-              <p className="notice">{emptyCopy}</p>
-            )}
-          </main>
+          <AgentPanel
+            onResults={showResults}
+            onBusy={showBusy}
+            onStarted={showStarted}
+            disabled={hasBackend === false}
+          />
+        </div>
+
+        {selected && (
+          <Lightbox
+            item={selected}
+            onClose={() => setSelected(null)}
+            projects={projects}
+            savedProjectIds={selectedSavedIds}
+            onToggleSave={(projectId, item) => void toggleSave(projectId, item)}
+            onCreateAndSave={(name, item) => void createAndSave(name, item)}
+          />
         )}
-
-        <AgentPanel
-          onResults={showResults}
-          onBusy={showBusy}
-          onStarted={showStarted}
-          disabled={hasBackend === false}
-        />
       </div>
 
+      {/* Sits outside .app so it falls below the fold — one screen of app, then
+          scroll for the credits. */}
       <footer className="colophon">
-        Artwork and metadata come from the{' '}
-        <a href="https://warcraft.wiki.gg/" target="_blank" rel="noreferrer noopener">
-          Warcraft Wiki
-        </a>
-        . Answers are generated by a local model and can be wrong — check the linked sources. World of
-        Warcraft is a trademark of Blizzard Entertainment. Unofficial fan index.
+        <p>
+          Artwork and metadata come from the{' '}
+          <a href="https://warcraft.wiki.gg/" target="_blank" rel="noreferrer noopener">
+            Warcraft Wiki
+          </a>
+          . Answers are generated by a local model and can be wrong — check the linked sources. World
+          of Warcraft is a trademark of Blizzard Entertainment. Unofficial fan index.
+        </p>
       </footer>
-
-      {selected && (
-        <Lightbox
-          item={selected}
-          onClose={() => setSelected(null)}
-          projects={projects}
-          savedProjectIds={selectedSavedIds}
-          onToggleSave={(projectId, item) => void toggleSave(projectId, item)}
-          onCreateAndSave={(name, item) => void createAndSave(name, item)}
-        />
-      )}
-    </div>
+    </>
   )
 }

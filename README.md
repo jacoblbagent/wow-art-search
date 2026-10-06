@@ -47,6 +47,11 @@ skeleton lines until the first tokens arrive, so the wait has a shape. On narrow
 stack (chat first) and the page scrolls normally; from 1100px up the whole app is one screen-height
 grid with each column scrolling independently.
 
+The credits line sits **outside `.app`**, so the app is exactly one screen and the disclaimer is
+below the fold — you meet it by scrolling, not while working. `#root` is `min-height: 100dvh` and
+`.app` is `min-height: 100dvh` (or a fixed `100dvh` with internal scrolling from 1100px up), which
+is what puts the footer past the fold at every width.
+
 ### Multiple chats
 
 The panel holds several conversations at once — **New chat** adds one, the tab strip switches
