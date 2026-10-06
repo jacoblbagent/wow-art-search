@@ -23,17 +23,26 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     model: config.model,
     ollama: config.ollamaUrl,
+    catalogue: config.catalogueEnabled,
     indexedArtworks: TOTAL,
     maxSteps: config.maxSteps,
   })
 })
 
-/** Direct catalogue search — powers the plain search box without the model. */
+/**
+ * Direct catalogue search — powers the plain search box without the model.
+ * Answers empty while the catalogue flag is off; the endpoint stays so the
+ * client does not need to special-case it.
+ */
 app.get('/api/artworks', (req, res) => {
   const q = String(req.query.q ?? '')
   const limit = Math.min(Number(req.query.limit ?? 48) || 48, 200)
+  if (!config.catalogueEnabled) {
+    res.json({ query: q, total: 0, items: [], catalogue: false })
+    return
+  }
   const { items, total } = searchIndex(q, limit)
-  res.json({ query: q, total, items })
+  res.json({ query: q, total, items, catalogue: true })
 })
 
 // ---- saved projects ----
@@ -215,5 +224,9 @@ if (fs.existsSync(config.distDir)) {
 app.listen(config.port, config.host, () => {
   console.log(`Azeroth Art Agent listening on http://${config.host}:${config.port}`)
   console.log(`  model   ${config.model} via ${config.ollamaUrl}`)
-  console.log(`  indexed ${TOTAL} artworks`)
+  console.log(
+    config.catalogueEnabled
+      ? `  indexed ${TOTAL} artworks`
+      : '  catalogue OFF (agent searches the live wiki only)',
+  )
 })

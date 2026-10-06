@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TOTAL, searchArt } from './search.ts'
+import { CATALOGUE_ENABLED } from '../shared/features.ts'
 import type { ArtItem } from './types.ts'
 import {
   addToProject,
@@ -14,6 +15,7 @@ import ArtCard from './components/ArtCard.tsx'
 import AgentPanel from './components/AgentPanel.tsx'
 import Lightbox from './components/Lightbox.tsx'
 import ProjectsPanel from './components/ProjectsPanel.tsx'
+import SkeletonGrid from './components/SkeletonGrid.tsx'
 import { SearchIcon } from './components/Icons.tsx'
 import './App.scss'
 
@@ -30,6 +32,7 @@ const QUICK: { label: string; query: string }[] = [
 ]
 
 const PAGE_SIZE = 48
+const EMPTY_PAGE = { items: [], total: 0, hasMore: false } as const
 
 function useDebounced(value: string, ms: number): string {
   const [out, setOut] = useState(value)
@@ -46,13 +49,16 @@ export default function App() {
   const [selected, setSelected] = useState<ArtItem | null>(null)
   const [agentItems, setAgentItems] = useState<ArtItem[] | null>(null)
   const [hasBackend, setHasBackend] = useState<boolean | null>(null)
+  /** the active chat is mid-answer — drives the loading skeleton */
+  const [busy, setBusy] = useState(false)
+  /** the active chat has been used at all — flips the layout to split view */
+  const [started, setStarted] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   /** where new saves go — also the highlighted row */
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
-  /** which project's images the gallery is showing (null = catalogue) */
+  /** which project's images the gallery is showing (null = nothing selected) */
   const [viewingProjectId, setViewingProjectId] = useState<string | null>(null)
   const [projectError, setProjectError] = useState<string | null>(null)
-  const gridTop = useRef<HTMLDivElement>(null)
   const query = useDebounced(input, 140).trim()
 
   useEffect(() => {
@@ -72,7 +78,10 @@ export default function App() {
     }
   }, [])
 
-  const page = useMemo(() => searchArt(query, limit), [query, limit])
+  const page = useMemo(
+    () => (CATALOGUE_ENABLED ? searchArt(query, limit) : EMPTY_PAGE),
+    [query, limit],
+  )
   const activeProject = useMemo(
     () => projects.find((p) => p.id === activeProjectId) ?? null,
     [projects, activeProjectId],
@@ -83,9 +92,9 @@ export default function App() {
   )
   const savedSrcs = useMemo(() => new Set(activeProject?.items.map((i) => i.src) ?? []), [activeProject])
 
-  // Saving into a project must not yank you out of the catalogue, so the grid
+  // Saving into a project must not yank you out of the results, so the grid
   // only follows a project when you explicitly click it. An empty project also
-  // keeps showing the catalogue, or you would have nothing to save from.
+  // keeps showing the previous results, or you would have nothing to save from.
   const projectEmpty = Boolean(viewingProject && viewingProject.items.length === 0)
   const showing = agentItems?.length
     ? agentItems
@@ -94,18 +103,23 @@ export default function App() {
       : page.items
   const viewingResults = Boolean(agentItems?.length || (viewingProject && !projectEmpty))
 
+  /**
+   * The landing view is a big chat canvas beside the sidebar. It splits into
+   * sidebar | gallery | chat as soon as there is something to show on the left
+   * — a question has been asked, or a project is open. With the catalogue flag
+   * on it always splits, because the search box and its chips live there.
+   */
+  const split = CATALOGUE_ENABLED || started || Boolean(viewingProject) || showing.length > 0
+
   // The gallery mirrors whichever chat is active in the agent panel.
   const showResults = useCallback((items: ArtItem[] | null) => {
     setAgentItems(items)
     if (items?.length) setViewingProjectId(null)
   }, [])
+  const showBusy = useCallback((value: boolean) => setBusy(value), [])
+  const showStarted = useCallback((value: boolean) => setStarted(value), [])
 
-  const contextLine = agentItems?.length ? null : projectEmpty && viewingProject ? (
-    <>
-      Nothing saved in <strong>{viewingProject.name}</strong> yet — hover an artwork and press the bookmark
-      to add it.
-    </>
-  ) : viewingProject ? (
+  const contextLine = agentItems?.length ? null : viewingProject ? (
     <>
       Viewing project <strong>{viewingProject.name}</strong> — {viewingProject.items.length} saved
     </>
@@ -114,6 +128,12 @@ export default function App() {
       Saving into <strong>{activeProject.name}</strong> — {activeProject.items.length} saved
     </>
   ) : null
+
+  const emptyCopy = projectEmpty && viewingProject
+    ? `Nothing saved in ${viewingProject.name} yet — hover an artwork and press the bookmark to add it.`
+    : agentItems
+      ? 'No artwork came back for that. Try naming a character, a race or a zone.'
+      : 'Ask the agent for artwork and what it finds will appear here.'
 
   const browse = (q: string) => {
     setAgentItems(null)
@@ -159,7 +179,6 @@ export default function App() {
       setProjects((prev) => [...prev, project])
       setActiveProjectId(project.id)
       setViewingProjectId(null)
-      setAgentItems(null)
     } catch (e) {
       setProjectError((e as Error).message)
     }
@@ -199,7 +218,7 @@ export default function App() {
         setViewingProjectId(null)
       }}
     >
-      View catalogue
+      Clear results
     </button>
   ) : null
 
@@ -209,13 +228,13 @@ export default function App() {
 
       {hasBackend === false && (
         <p className="notice notice--warn">
-          The agent backend isn’t running, so this is catalogue-only and projects are unavailable. Start it
-          with <code>npm start</code>.
+          The agent backend isn’t running, so the agent and projects are unavailable. Start it with{' '}
+          <code>npm start</code>.
         </p>
       )}
       {projectError && <p className="notice notice--warn">{projectError}</p>}
 
-      <div className="layout">
+      <div className={`layout layout--${split ? 'split' : 'focus'}`}>
         <ProjectsPanel
           projects={projects}
           activeId={activeProjectId}
@@ -230,60 +249,56 @@ export default function App() {
           disabled={hasBackend === false}
         />
 
-        <div className="browse">
-          <div className="toolbar">
-            <form
-              className="search"
-              role="search"
-              onSubmit={(e) => {
-                e.preventDefault()
-              }}
-            >
-              <span className="search__icon" aria-hidden="true">
-                <SearchIcon />
-              </span>
-              <input
-                className="search__input"
-                type="search"
-                value={input}
-                onChange={(e) => {
-                  setAgentItems(null)
-                  setViewingProjectId(null)
-                  setInput(e.target.value)
-                }}
-                placeholder={`Search ${TOTAL.toLocaleString()} catalogued artworks: Illidan, dragon, Ironforge…`}
-                aria-label="Search the catalogue"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </form>
-            <div className="toolbar__row">
-              <div className="chips" role="tablist" aria-label="Collections">
-                {QUICK.map((c) => (
-                  <button
-                    key={c.label}
-                    type="button"
-                    role="tab"
-                    aria-selected={!viewingResults && query === c.query}
-                    className={`chip${!viewingResults && query === c.query ? ' chip--on' : ''}`}
-                    onClick={() => browse(c.query)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
+        {split && (
+          <main className="stage" aria-busy={busy || undefined}>
+            {CATALOGUE_ENABLED && (
+              <div className="toolbar">
+                <form
+                  className="search"
+                  role="search"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                  }}
+                >
+                  <span className="search__icon" aria-hidden="true">
+                    <SearchIcon />
+                  </span>
+                  <input
+                    className="search__input"
+                    type="search"
+                    value={input}
+                    onChange={(e) => {
+                      setAgentItems(null)
+                      setViewingProjectId(null)
+                      setInput(e.target.value)
+                    }}
+                    placeholder={`Search ${TOTAL.toLocaleString()} catalogued artworks: Illidan, dragon, Ironforge…`}
+                    aria-label="Search the catalogue"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </form>
+                <div className="toolbar__row">
+                  <div className="chips" role="tablist" aria-label="Collections">
+                    {QUICK.map((c) => (
+                      <button
+                        key={c.label}
+                        type="button"
+                        role="tab"
+                        aria-selected={!viewingResults && query === c.query}
+                        className={`chip${!viewingResults && query === c.query ? ' chip--on' : ''}`}
+                        onClick={() => browse(c.query)}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                  {tally}
+                </div>
               </div>
-              {tally}
-            </div>
-          </div>
+            )}
 
-          <main className="stage" ref={gridTop}>
-            {showing.length === 0 ? (
-              <p className="notice">
-                {query
-                  ? `No catalogued artwork matched “${query}”. Try the agent — it can search the live wiki.`
-                  : 'Nothing to show.'}
-              </p>
-            ) : (
+            {showing.length > 0 ? (
               <>
                 {contextLine && <p className="viewing">{contextLine}</p>}
                 <div className="grid">
@@ -305,21 +320,30 @@ export default function App() {
                   </div>
                 )}
               </>
+            ) : busy ? (
+              <SkeletonGrid />
+            ) : (
+              <p className="notice">{emptyCopy}</p>
             )}
           </main>
+        )}
 
-          <footer className="colophon">
-            Artwork and metadata come from the{' '}
-            <a href="https://warcraft.wiki.gg/" target="_blank" rel="noreferrer noopener">
-              Warcraft Wiki
-            </a>
-            . Answers are generated by a local model and can be wrong — check the linked sources. World
-            of Warcraft is a trademark of Blizzard Entertainment. Unofficial fan index.
-          </footer>
-        </div>
-
-        <AgentPanel onResults={showResults} disabled={hasBackend === false} />
+        <AgentPanel
+          onResults={showResults}
+          onBusy={showBusy}
+          onStarted={showStarted}
+          disabled={hasBackend === false}
+        />
       </div>
+
+      <footer className="colophon">
+        Artwork and metadata come from the{' '}
+        <a href="https://warcraft.wiki.gg/" target="_blank" rel="noreferrer noopener">
+          Warcraft Wiki
+        </a>
+        . Answers are generated by a local model and can be wrong — check the linked sources. World of
+        Warcraft is a trademark of Blizzard Entertainment. Unofficial fan index.
+      </footer>
 
       {selected && (
         <Lightbox

@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { config } from './config.ts'
 import { parseQuery, rankByRelevance } from '../shared/match.ts'
+import { CATALOGUE_ENABLED } from '../shared/features.ts'
 import type { ArtItem } from './types.ts'
 
 interface Row {
@@ -14,7 +15,11 @@ interface Row {
   page: string
 }
 
-const rows: Row[] = JSON.parse(fs.readFileSync(config.dataFile, 'utf8'))
+/**
+ * The bundled index is only read when the catalogue is enabled, so with the
+ * flag off the server starts fine even if the data file has been removed.
+ */
+const rows: Row[] = CATALOGUE_ENABLED ? JSON.parse(fs.readFileSync(config.dataFile, 'utf8')) : []
 
 export const TOTAL = rows.length
 
@@ -37,6 +42,7 @@ function toItem(r: Row): ArtItem {
  * for why the wiki prose is not searched.
  */
 export function searchIndex(query: string, limit = 24): { items: ArtItem[]; total: number } {
+  if (!CATALOGUE_ENABLED) return { items: [], total: 0 }
   const parsed = parseQuery(query)
   if (!parsed.terms.length) return { items: [], total: 0 }
   const matched = rankByRelevance(rows, parsed, (r) => ({ title: r.title, artist: r.artist }))
@@ -48,6 +54,7 @@ export function artistLeaderboard(
   topic = '',
   limit = 10,
 ): { artist: string; count: number; sample: string; page: string }[] {
+  if (!CATALOGUE_ENABLED) return []
   const parsed = parseQuery(topic)
   const pool = topic.trim()
     ? rankByRelevance(rows, parsed, (r) => ({ title: r.title, artist: r.artist }))
@@ -68,6 +75,7 @@ export function artistLeaderboard(
 
 /** Distinct artists matching a name fragment — used to resolve "Gonzalez" -> full names. */
 export function findArtists(fragment: string, limit = 12): { artist: string; count: number }[] {
+  if (!CATALOGUE_ENABLED) return []
   const f = fragment.trim().toLowerCase()
   if (!f) return []
   const counts = new Map<string, number>()

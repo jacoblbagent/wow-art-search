@@ -1,5 +1,6 @@
 import { artistLeaderboard, findArtists, searchIndex } from './artindex.ts'
 import { articleSummary, fileDetails, searchWiki } from './wiki.ts'
+import { CATALOGUE_ENABLED } from '../shared/features.ts'
 import type { ArtItem } from './types.ts'
 
 export interface ToolOutcome {
@@ -13,7 +14,7 @@ export interface ToolOutcome {
   citations: { label: string; url: string }[]
 }
 
-export const toolSchemas = [
+const allToolSchemas = [
   {
     type: 'function' as const,
     function: {
@@ -104,6 +105,18 @@ export const toolSchemas = [
   },
 ]
 
+/** Tools that only make sense with the bundled index behind them. */
+const CATALOGUE_TOOLS = new Set(['search_index', 'artist_leaderboard', 'find_artists'])
+
+/**
+ * With the catalogue flag off these tools are not advertised to the model at
+ * all, so it cannot call them and cannot promise index results it cannot get.
+ * The live-wiki tools below always stay available.
+ */
+export const toolSchemas = allToolSchemas.filter(
+  (t) => CATALOGUE_ENABLED || !CATALOGUE_TOOLS.has(t.function.name),
+)
+
 export const TOOL_NAMES = toolSchemas.map((t) => t.function.name)
 
 function argNum(v: unknown, fallback: number): number {
@@ -123,6 +136,14 @@ function slim(items: ArtItem[]) {
 export async function executeTool(name: string, args: Record<string, unknown>): Promise<ToolOutcome> {
   switch (name) {
     case 'search_index': {
+      if (!CATALOGUE_ENABLED) {
+        return {
+          result: { error: 'The bundled catalogue is switched off. Use search_wiki instead.' },
+          status: 'Catalogue is switched off',
+          artworks: [],
+          citations: [],
+        }
+      }
       const query = argStr(args.query)
       const { items, total } = searchIndex(query, argNum(args.limit, 24))
       return {

@@ -6,7 +6,7 @@ from PIL import Image
 
 RAW = "/tmp/artworks_raw.json"
 PROJ = "/home/jlbroughton/Code/wow-art-search"
-IMG_DIR = os.path.join(PROJ, "public", "images")
+IMG_DIR = os.path.join(PROJ, "catalogue", "images")
 DATA_OUT = os.path.join(PROJ, "src", "data", "artworks.json")
 
 CAP = 2200

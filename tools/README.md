@@ -1,14 +1,19 @@
 # Index build scripts
 
-These regenerate `src/data/artworks.json` and `public/images/*.webp` from the
+These regenerate `src/data/artworks.json` and `catalogue/images/*.webp` from the
 Warcraft Wiki. They are not part of the site build — run them only when you want
 to refresh the artwork index.
+
+The images live in `catalogue/` rather than `public/` because they are only part
+of the app when the catalogue flag is on (see `shared/features.ts` and the
+`catalogue-images` plugin in `vite.config.ts`). There are ~2,090 of them and they
+add ~64 MB, so they are kept out of the build and out of `public/` entirely.
 
 Run in order (from the repo root), with Pillow available:
 
 ```bash
 python3 tools/harvest.py      # ~125 wiki searches -> /tmp/artworks_raw.json
-python3 tools/build_index.py  # download + convert -> public/images + src/data/artworks.json
+python3 tools/build_index.py  # download + convert -> catalogue/images + src/data/artworks.json
 python3 tools/clean_index.py  # trim artist credits, strip version/generic title prefixes
 python3 tools/clean2.py       # strip leading punctuation, youtube/timecode noise
 python3 tools/clean3.py       # strip trailing "by <Artist>" duplications

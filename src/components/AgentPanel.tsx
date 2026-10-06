@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { askAgent } from '../agent.ts'
+import { CATALOGUE_ENABLED } from '../../shared/features.ts'
 import type { ArtItem, ChatTurn } from '../types.ts'
 import { CloseIcon, PlusIcon, RefreshIcon } from './Icons.tsx'
 
 interface Props {
   onResults: (items: ArtItem[] | null) => void
+  /** the active chat is mid-answer */
+  onBusy?: (busy: boolean) => void
+  /** the active chat has been used at all */
+  onStarted?: (started: boolean) => void
   disabled?: boolean
 }
 
@@ -26,12 +31,10 @@ interface Chat {
 }
 
 /**
- * Every prompt here was checked against the live data: art searches return
- * results from the bundled catalogue, the questions have real answers, and the
- * live-wiki prompts return files. The pool mixes all three so a refresh cycles
- * through different capabilities.
+ * Prompts checked against the bundled index — art searches, artist questions
+ * and prop/mood collections. Only offered when the catalogue flag is on.
  */
-const SEED_POOL = [
+const CATALOGUE_SEEDS = [
   // catalogue searches — races and peoples
   'troll concept art',
   'vrykul concept art',
@@ -83,16 +86,33 @@ const SEED_POOL = [
   'Who painted the most Dragonflight art?',
   'Who made the most Revendreth art?',
   'Who has drawn the most nerubian art?',
-  // live-wiki discovery
-  'Use the live wiki to find gnome tinker artwork',
+]
+
+/**
+ * Live-wiki and lore prompts. Every one of these is answered by the server's
+ * wiki proxy, so they work with no bundled data at all — which is why they are
+ * the whole pool while the catalogue is switched off.
+ */
+const LIVE_SEEDS = [
+  'Search the live wiki for Illidan artwork',
+  'Search the live wiki for Sylvanas art',
+  'Search the live wiki for dragonflight concept art',
+  'Search the live wiki for gnome tinker art',
   'Search the live wiki for trading card art',
-  "Find K'aresh art on the live wiki",
   'Search the live wiki for warbringers art',
+  "Find K'aresh art on the live wiki",
+  'Search the live wiki for murloc art',
+  'Search the live wiki for tuskarr art',
+  'Search the live wiki for ethereal art',
   // lore
   "Who is Xal'atath?",
   'What is the Arathi Empire?',
   'Tell me about the nerubians',
+  'What is the story of the Earthen Ring?',
+  'Tell me about the Arathi Highlands',
 ]
+
+const SEED_POOL = CATALOGUE_ENABLED ? [...CATALOGUE_SEEDS, ...LIVE_SEEDS] : LIVE_SEEDS
 
 const SEED_COUNT = 4
 const TITLE_MAX = 24
@@ -139,7 +159,7 @@ function titleOf(chat: Chat): string {
  * in-flight run. Runs continue streaming while you look at another chat, so
  * several can be in flight at once.
  */
-export default function AgentPanel({ onResults, disabled }: Props) {
+export default function AgentPanel({ onResults, onBusy, onStarted, disabled }: Props) {
   // Conversations and the selection live in one object so every update is
   // atomic — closing two chats in quick succession can't clobber itself the way
   // two separate setState calls reading render-scope state would.
@@ -166,6 +186,18 @@ export default function AgentPanel({ onResults, disabled }: Props) {
   useEffect(() => {
     onResults(activeArtworks && activeArtworks.length ? activeArtworks : null)
   }, [activeArtworks, onResults])
+
+  // Drive the App's layout: busy shows the loading skeleton, started splits the
+  // view into sidebar | gallery | chat. Gate on primitives so the callbacks are
+  // not fired on every re-render of the board.
+  const activeBusy = Boolean(active?.busy)
+  const activeStarted = Boolean(active && (active.turns.length > 0 || active.draft))
+  useEffect(() => {
+    onBusy?.(activeBusy)
+  }, [activeBusy, onBusy])
+  useEffect(() => {
+    onStarted?.(activeStarted)
+  }, [activeStarted, onStarted])
 
   useEffect(() => {
     const el = transcript.current
@@ -383,12 +415,20 @@ export default function AgentPanel({ onResults, disabled }: Props) {
               {active.draft.text ? (
                 <p className="turn__text">{active.draft.text}</p>
               ) : (
-                <p className="turn__text dim">Thinking…</p>
+                <div className="skel-lines" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
               )}
             </div>
           </div>
         )}
       </div>
+
+      <p className="sr-only" role="status">
+        {active.busy ? 'The agent is working.' : ''}
+      </p>
 
       <form
         className="agent__form"
@@ -409,7 +449,11 @@ export default function AgentPanel({ onResults, disabled }: Props) {
             }
           }}
           rows={2}
-          placeholder="Ask for art, artists or lore — search the catalogue and the live wiki"
+          placeholder={
+            CATALOGUE_ENABLED
+              ? 'Ask for art, artists or lore — search the catalogue and the live wiki'
+              : 'Ask for artwork or lore — the agent searches the live Warcraft Wiki'
+          }
           aria-label="Ask the art agent"
         />
         {active.busy ? (

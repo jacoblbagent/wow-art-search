@@ -309,10 +309,6 @@
   flex-direction: column;
 }
 
-.browse {
-  min-width: 0;
-}
-
 .agent {
   order: -2;
   margin-top: 20px;
@@ -623,6 +619,7 @@
 /* ---------- results ---------- */
 
 .stage {
+  min-width: 0;
   min-height: 40vh;
 }
 
@@ -641,6 +638,99 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ---------- loading skeleton ---------- */
+
+.skel {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.skel__frame {
+  aspect-ratio: 4 / 3;
+}
+
+.skel__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 13px 16px;
+}
+
+.skel__frame,
+.skel__bar,
+.skel-lines span {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.skel__bar {
+  height: 11px;
+  border-radius: 3px;
+}
+
+.skel__bar--thin {
+  height: 9px;
+  opacity: 0.7;
+}
+
+/* The travelling sheen that makes the blocks read as "loading". */
+.skel__frame::after,
+.skel__bar::after,
+.skel-lines span::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  animation: sheen 1.4s ease-in-out infinite;
+}
+
+@keyframes sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Placeholder prose in the chat while the first tokens are still coming. */
+.skel-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(72ch, 100%);
+  padding: 2px 0;
+}
+
+.skel-lines span {
+  height: 12px;
+  border-radius: 3px;
+}
+
+.skel-lines span:nth-child(1) {
+  width: 100%;
+}
+
+.skel-lines span:nth-child(2) {
+  width: 92%;
+}
+
+.skel-lines span:nth-child(3) {
+  width: 58%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel__frame::after,
+  .skel__bar::after,
+  .skel-lines span::after {
+    animation: none;
+    opacity: 0;
   }
 }
 
@@ -1055,16 +1145,16 @@ code {
   }
 }
 
-/* ---------- docked agent sidebar (wide screens) ---------- */
+/* ---------- full-screen app shell (wide screens) ---------- */
 
 @media (min-width: 1100px) {
   #root {
-    height: 100vh;
+    height: 100dvh;
   }
 
   .app {
     height: 100%;
-    max-width: 1600px;
+    max-width: 1720px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1075,16 +1165,37 @@ code {
     flex: 1 1 auto;
     min-height: 0;
     display: grid;
-    grid-template-columns: 212px minmax(0, 1fr) 404px;
     grid-template-rows: minmax(0, 1fr);
     gap: 22px;
     padding: 22px 0;
   }
 
-  .browse {
-    min-height: 0;
-    overflow-y: auto;
-    scrollbar-gutter: stable;
+  /* Landing view: the sidebar and one large chat canvas, nothing else. */
+  .layout--focus {
+    grid-template-columns: 236px minmax(0, 1fr);
+  }
+
+  /* Once a question has been asked: gallery through the middle, chat docked right. */
+  .layout--split {
+    grid-template-columns: 236px minmax(0, 1fr) 396px;
+  }
+
+  /* Keep the chat column readable rather than letting lines run the full width. */
+  .layout--focus .agent__head,
+  .layout--focus .chatbar,
+  .layout--focus .agent__transcript,
+  .layout--focus .agent__form {
+    width: min(780px, 100%);
+    margin-inline: auto;
+  }
+
+  /* Float the suggestion chips into the middle of the empty canvas. */
+  .layout--focus .agent__intro {
+    margin-block: auto;
+  }
+
+  .layout--focus .agent__input {
+    min-height: 76px;
   }
 
   .toolbar {
@@ -1094,6 +1205,13 @@ code {
     background: var(--bg);
     margin-top: 0;
     padding: 0 0 16px;
+  }
+
+  .stage {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-bottom: 8px;
   }
 
   .agent {

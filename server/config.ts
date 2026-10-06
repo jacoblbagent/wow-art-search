@@ -1,9 +1,12 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CATALOGUE_ENABLED } from '../shared/features.ts'
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export const config = {
+  /** Mirrors shared/features.ts — see that file for what the flag covers. */
+  catalogueEnabled: CATALOGUE_ENABLED,
   port: Number(process.env.PORT ?? 3090),
   host: process.env.HOST ?? '0.0.0.0',
   /** Ollama's OpenAI-compatible endpoint. */

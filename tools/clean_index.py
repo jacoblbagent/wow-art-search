@@ -3,7 +3,7 @@
 import json, os, re
 
 DATA = "/home/jlbroughton/Code/wow-art-search/src/data/artworks.json"
-IMGS = "/home/jlbroughton/Code/wow-art-search/public/images"
+IMGS = "/home/jlbroughton/Code/wow-art-search/catalogue/images"
 
 rows = json.load(open(DATA))
 before = len(rows)
