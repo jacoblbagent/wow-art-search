@@ -122,36 +122,23 @@
   border-color: var(--accent);
 }
 
-.tally {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 10px;
-  font-size: var(--step-1);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--chip-ink);
-  background: var(--chip-bg);
-  border-radius: var(--r-sm);
-}
-
-.tally__sep {
-  opacity: 0.5;
-}
-
 .tally__reset {
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: none;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  padding: 7px 13px;
+  font-size: var(--step-2);
+  font-weight: 500;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
   cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
 .tally__reset:hover {
   opacity: 0.8;
+  color: var(--ink);
+  border-color: var(--accent);
 }
 
 /* ---------- agent ---------- */

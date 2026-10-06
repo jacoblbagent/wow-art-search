@@ -71,20 +71,10 @@ export default function App() {
   }
 
   const tally = agentItems ? (
-    <>
-      {agentItems.length.toLocaleString()} from the agent
-      <span className="tally__sep">·</span>
-      <button type="button" className="tally__reset" onClick={() => setAgentItems(null)}>
-        clear
-      </button>
-    </>
-  ) : (
-    <>
-      {page.total.toLocaleString()} {page.total === 1 ? 'match' : 'matches'}
-      <span className="tally__sep">·</span>
-      {page.items.length.toLocaleString()} shown
-    </>
-  )
+    <button type="button" className="tally__reset" onClick={() => setAgentItems(null)}>
+      Clear results
+    </button>
+  ) : null
 
   return (
     <div className="app">
@@ -147,7 +137,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <span className="tally">{tally}</span>
+            {tally}
           </div>
 
           <main className="stage" ref={gridTop}>
