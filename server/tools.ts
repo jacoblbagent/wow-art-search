@@ -19,7 +19,7 @@ export const toolSchemas = [
     function: {
       name: 'search_index',
       description:
-        'Search the local index of 2,090 catalogued World of Warcraft artworks. Fast, offline, and the best first call for any art request. Searches titles, artist names and wiki descriptions.',
+        'Search the local index of 2,090 catalogued World of Warcraft artworks. Fast, offline, and the best first call for any art request. Matches on artwork TITLES and ARTIST NAMES only, so every result is visibly relevant: each returned title contains your search words. Generic words such as "art", "concept" or "wallpaper" are treated as optional, so "orc concept art" really means "orc".',
       parameters: {
         type: 'object',
         properties: {

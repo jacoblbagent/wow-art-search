@@ -21,8 +21,7 @@ for r in rows:
     if len(t) < 5:
         continue
     a = r['artist']
-    ctx = (t + ' ' + (a or '') + ' ' + r['ctx']).lower()[:260]
-    out.append({**r, 'title': t, 'ctx': ctx})
+    out.append({**r, 'title': t})
 
 out.sort(key=lambda r: r['title'].lower())
 json.dump(out, open(DATA, 'w'), separators=(',', ':'))

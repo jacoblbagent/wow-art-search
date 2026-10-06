@@ -104,7 +104,6 @@ for r, fn in jobs:
         "img": fn,
         "full": r["full"],
         "page": r["page"],
-        "ctx": (r["title"] + " " + (r.get("artist") or "") + " " + r.get("ctx", ""))[:600],
     })
 
 out.sort(key=lambda r: r["title"].lower())

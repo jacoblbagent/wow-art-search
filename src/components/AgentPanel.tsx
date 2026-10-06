@@ -49,7 +49,7 @@ const SEED_POOL = [
   // creatures and forces
   'dragon concept art',
   'proto-dragon concept art',
-  'old god concept art',
+  'tuskarr concept art',
   'void concept art',
   'fel concept art',
   'elemental concept art',

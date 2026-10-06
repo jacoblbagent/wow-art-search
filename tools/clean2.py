@@ -31,8 +31,7 @@ for r in rows:
         t = LEAD.sub('', t).strip()
     if len(t) < 5:
         continue
-    ctx = (t + ' ' + (a or '') + ' ' + r['ctx']).lower()[:260]
-    out.append({**r, 'title': t, 'ctx': ctx})
+    out.append({**r, 'title': t})
 
 out.sort(key=lambda r: r['title'].lower())
 json.dump(out, open(DATA, 'w'), separators=(',', ':'))

@@ -43,10 +43,7 @@ for r in rows:
         if len(a) < 3 or re.search(r"\d|https?|www", a):
             a = None
     r = {**r, "title": t, "artist": a}
-    if a:
-        r["ctx"] = (t + " " + a + " " + r.get("ctx", "")).lower()
-    else:
-        r["ctx"] = (t + " " + r.get("ctx", "")).lower()
+    r.pop("ctx", None)
     out.append(r)
 
 out.sort(key=lambda r: r["title"].lower())

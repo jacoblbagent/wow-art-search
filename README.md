@@ -16,6 +16,20 @@ says so when it can't find one).
 Ask in plain English. The agent calls tools, then answers in a sentence or two and drops the
 matching artwork into the grid below.
 
+### Relevance — every result is title-matched
+
+Search matches artwork **titles and artist names only**; wiki page prose is never searched. Subject
+words ("orc", "nerubian", "revendreth") must all appear in the title or artist for a piece to be
+returned, while medium words ("art", "concept", "wallpaper") are optional and only affect ranking.
+So "orc concept art" means "orc", and the 31 results all have *Orc …* in the title. The agent is
+instructed to describe a piece only in terms its own title supports, and to say the catalogue has no
+close match rather than pad an answer with near-misses.
+
+Why: matching used to include the wiki description, and Wikipedia-style prose is full of incidental
+mentions — a black-and-white sketch of an *archer* matched "orc concept art" because its caption read
+"an archer from *Warcraft: Orcs & Humans*". Both the client search and the server tools now share
+one matcher (`shared/match.ts`) so they cannot drift apart again.
+
 | Tool | Purpose |
 |---|---|
 | `search_index` | 2,090 catalogued artworks — fast, offline |

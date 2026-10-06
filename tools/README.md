@@ -21,5 +21,9 @@ Notes:
 - `build_index.py` is threaded; re-runs skip images already on disk.
 - `clean*.py` also delete WebP files whose rows were dropped, so run them after
   `build_index.py` and then rebuild the site.
+- The index deliberately stores only `id, title, artist, w, h, img, full, page`.
+  Wiki page prose (`ctx`) is **not** stored or searched — matching is title/artist
+  only (see `shared/match.ts`), which is what keeps results relevant. Don't
+  reintroduce a prose field into the search path.
 - Keep image width/quality settings in `build_index.py` in mind — the repo is
   ~60 MB of WebP at 640 px / quality 72.
